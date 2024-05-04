@@ -4,11 +4,18 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"os"
 
+	"github.com/prometheus-operator/poctl/internal/builder"
+	"github.com/prometheus-operator/poctl/internal/client"
 	"github.com/prometheus-operator/poctl/internal/log"
+	opClientv1 "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 // stackCmd represents the stack command
@@ -21,6 +28,22 @@ var stackCmd = &cobra.Command{
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
+		}
+
+		k8sClient, err := client.NewK8sClient(logger, kubeconfig)
+		if err != nil {
+			logger.Error("error while creating k8s client", err)
+			os.Exit(1)
+		}
+
+		poClient, err := client.NewPrometheusOperatorV1(logger, kubeconfig)
+		if err != nil {
+			logger.Error("error while creating Prometheus Operator client", err)
+			os.Exit(1)
+		}
+
+		if err := createPrometheusOperator(cmd.Context(), logger, k8sClient, poClient, metav1.NamespaceDefault, "0.73.2"); err != nil {
+			logger.Error("error while creating Prometheus Operator", err)
 		}
 
 		logger.Info("stack command called")
@@ -39,4 +62,58 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// stackCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+func createPrometheusOperator(
+	ctx context.Context,
+	logger *slog.Logger,
+	k8sClient *kubernetes.Clientset,
+	poClient *opClientv1.MonitoringV1Client,
+	namespace, version string) error {
+	manifests := builder.NewOperator(namespace, version).
+		WithServiceAccount().
+		WithClusterRole().
+		WithClusterRoleBinding().
+		WithService().
+		WithServiceMonitor().
+		WithDeployment().
+		Build()
+
+	_, err := k8sClient.CoreV1().ServiceAccounts(namespace).Create(ctx, manifests.ServiceAccount, metav1.CreateOptions{})
+	if err != nil {
+		logger.Error("error while creating ServiceAccount", err)
+		return err
+	}
+
+	_, err = k8sClient.RbacV1().ClusterRoles().Create(ctx, manifests.ClusterRole, metav1.CreateOptions{})
+	if err != nil {
+		logger.Error("error while creating ClusterRole", err)
+		return err
+	}
+
+	_, err = k8sClient.RbacV1().ClusterRoleBindings().Create(ctx, manifests.ClusterRoleBinding, metav1.CreateOptions{})
+	if err != nil {
+		logger.Error("error while creating ClusterRoleBinding", err)
+		return err
+	}
+
+	_, err = k8sClient.CoreV1().Services(namespace).Create(ctx, manifests.Service, metav1.CreateOptions{})
+	if err != nil {
+		logger.Error("error while creating Service", err)
+		return err
+	}
+
+	_, err = poClient.ServiceMonitors(namespace).Create(ctx, manifests.ServiceMonitor, metav1.CreateOptions{})
+	if err != nil {
+		logger.Error("error while creating ServiceMonitor", err)
+		return err
+	}
+
+	_, err = k8sClient.AppsV1().Deployments(namespace).Create(ctx, manifests.Deployment, metav1.CreateOptions{})
+	if err != nil {
+		logger.Error("error while creating Deployment", err)
+		return err
+	}
+
+	return nil
 }
