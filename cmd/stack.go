@@ -10,9 +10,10 @@ import (
 	"os"
 
 	"github.com/prometheus-operator/poctl/internal/builder"
-	"github.com/prometheus-operator/poctl/internal/client"
+	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
+	"github.com/prometheus-operator/prometheus-operator/pkg/k8sutil"
+	"k8s.io/client-go/rest"
 	"github.com/prometheus-operator/poctl/internal/log"
-	opClientv1 "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -30,19 +31,25 @@ var stackCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		k8sClient, err := client.NewK8sClient(logger, kubeconfig)
+		restConfig, err := k8sutil.NewClusterConfig("", rest.TLSClientConfig{}, "")
+		if err != nil {
+			logger.Error("msg", "failed to create Kubernetes client configuration", "err", err)
+			os.Exit(1)
+		}
+
+		kclient, err := kubernetes.NewForConfig(restConfig)
 		if err != nil {
 			logger.Error("error while creating k8s client", err)
 			os.Exit(1)
 		}
 
-		poClient, err := client.NewPrometheusOperatorV1(logger, kubeconfig)
+		mclient, err := monitoringclient.NewForConfig(restConfig)
 		if err != nil {
 			logger.Error("error while creating Prometheus Operator client", err)
 			os.Exit(1)
 		}
 
-		if err := createPrometheusOperator(cmd.Context(), logger, k8sClient, poClient, metav1.NamespaceDefault, "0.73.2"); err != nil {
+		if err := createPrometheusOperator(cmd.Context(), logger, kclient, mclient, metav1.NamespaceDefault, "0.73.2"); err != nil {
 			logger.Error("error while creating Prometheus Operator", err)
 		}
 
@@ -68,7 +75,7 @@ func createPrometheusOperator(
 	ctx context.Context,
 	logger *slog.Logger,
 	k8sClient *kubernetes.Clientset,
-	poClient *opClientv1.MonitoringV1Client,
+	poClient *monitoringclient.Clientset,
 	namespace, version string) error {
 	manifests := builder.NewOperator(namespace, version).
 		WithServiceAccount().
@@ -103,9 +110,9 @@ func createPrometheusOperator(
 		return err
 	}
 
-	_, err = poClient.ServiceMonitors(namespace).Create(ctx, manifests.ServiceMonitor, metav1.CreateOptions{})
+	_, err = poClient.MonitoringV1().ServiceMonitors(namespace).Create(ctx, manifests.ServiceMonitor, metav1.CreateOptions{})
 	if err != nil {
-		logger.Error("error while creating ServiceMonitor", err)
+		logger.Error("error while creating ServiceMonitor", "error", err)
 		return err
 	}
 
