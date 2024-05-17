@@ -11,12 +11,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// stackCmd represents the stack command
+// stackCmd represents the stack command.
 var stackCmd = &cobra.Command{
 	Use:   "stack",
 	Short: "create a stack of Prometheus Operator resources.",
 	Long:  `create a stack of Prometheus Operator resources.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		logger, err := log.NewLogger()
 		if err != nil {
 			fmt.Println(err)
