@@ -1,0 +1,56 @@
+name: checks
+on:
+  pull_request:
+  push:
+    branches:
+      - 'main'
+jobs:
+  check-docs:
+    runs-on: ubuntu-latest
+    name: Check Documentation formatting and links
+    steps:
+    - uses: actions/checkout@v4
+    - name: Import environment variables from file
+      run: cat ".github/env" >> $GITHUB_ENV
+    - uses: actions/setup-go@v5
+      with:
+        go-version: '${{ env.golang-version }}'
+        check-latest: true
+    - run: make check-docs
+
+  check-golang:
+    runs-on: ubuntu-latest
+    name: Golang linter
+    steps:
+      - uses: actions/checkout@v4
+      - name: Import environment variables from file
+        run: cat ".github/env" >> $GITHUB_ENV
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '${{ env.golang-version }}'
+          check-latest: true
+      - name: go.mod
+        run: make tidy && git diff --exit-code
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6.0.1
+        with:
+          version: v1.57.2
+          args: --timeout 10m0s --go ${{ env.golang-version }}
+
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+    name: Build operator binary
+    steps:
+    - uses: actions/checkout@v4
+    - name: Import environment variables from file
+      run: cat ".github/env" >> $GITHUB_ENV
+    - uses: actions/setup-go@v5
+      with:
+        go-version: '${{ env.golang-version }}'
+        check-latest: true
+    - run: make poctl
