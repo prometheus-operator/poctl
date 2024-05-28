@@ -49,13 +49,6 @@ var stackCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err != nil {
-			logger.With("error", err.Error()).Error("error while getting kubeconfig")
-			os.Exit(1)
-		}
-
-		cmd.Context()
-
 		if err := createPrometheusOperator(cmd.Context(), logger, kclient, mclient, metav1.NamespaceDefault, "0.73.2"); err != nil {
 			logger.With("error", err.Error()).Error("error while creating Prometheus Operator")
 			os.Exit(1)
