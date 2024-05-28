@@ -30,6 +30,8 @@ func Execute() {
 	}
 }
 
+var kubeconfig string
+
 func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
@@ -39,5 +41,6 @@ func init() {
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
+	rootCmd.PersistentFlags().StringVar(&kubeconfig, "kubeconfig", os.Getenv("KUBECONFIG"), "path to the kubeconfig file, defaults to $KUBECONFIG")
 	log.RegisterFlags(rootCmd.PersistentFlags())
 }
