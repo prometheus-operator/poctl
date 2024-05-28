@@ -5,7 +5,7 @@ on:
     branches:
       - 'main'
 jobs:
-  check-docs:
+  format:
     runs-on: ubuntu-latest
     name: Check Documentation formatting and links
     steps:
@@ -16,7 +16,7 @@ jobs:
       with:
         go-version: '${{ env.golang-version }}'
         check-latest: true
-    - run: make check-docs
+    - run: make check-docs check-license
 
   check-golang:
     runs-on: ubuntu-latest
