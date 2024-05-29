@@ -26,6 +26,10 @@ check-docs: $(MDOX_BINARY)
 	@echo ">> checking formatting and local/remote links"
 	$(MDOX_BINARY) fmt --soft-wraps --check -l --links.localize.address-regex="https://prometheus-operator.dev/.*" --links.validate.config-file=$(MDOX_VALIDATE_CONFIG) $(MD_FILES_TO_FORMAT)
 
+.PHONY: check-license
+check-license:
+	./scripts/check-license.sh
+
 .PHONY: check-golang
 check-golang: $(GOLANGCILINTER_BINARY)
 	$(GOLANGCILINTER_BINARY) run
