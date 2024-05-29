@@ -94,42 +94,41 @@ func createPrometheusOperator(
 		WithDeployment().
 		Build()
 
-	_, err := k8sClient.CoreV1().ServiceAccounts(namespace).Create(ctx, manifests.ServiceAccount, metav1.CreateOptions{})
+	err := k8sutil.CreateOrUpdateServiceAccount(ctx, logger, k8sClient, namespace, manifests.ServiceAccount)
 	if err != nil {
-		logger.With("error", err.Error()).Error("error while creating ServiceAccount")
+		logger.With("error", err.Error()).Error("error while creating ServiceAccount", "serviceAccount", fmt.Sprintf("%s/%s", namespace, manifests.ServiceAccount.GetName()))
 		return err
 	}
 
-	_, err = k8sClient.RbacV1().ClusterRoles().Create(ctx, manifests.ClusterRole, metav1.CreateOptions{})
+	err = k8sutil.CreateOrUpdateClusterRole(ctx, logger, k8sClient, manifests.ClusterRole)
 	if err != nil {
-		logger.With("error", err.Error()).Error("error while creating ClusterRole")
+		logger.With("error", err.Error()).Error("error while creating ClusterRole", "clusterRole", manifests.ClusterRole.GetName())
 		return err
 	}
 
-	_, err = k8sClient.RbacV1().ClusterRoleBindings().Create(ctx, manifests.ClusterRoleBinding, metav1.CreateOptions{})
+	err = k8sutil.CreateOrUpdateClusterRoleBinding(ctx, logger, k8sClient, manifests.ClusterRoleBinding)
 	if err != nil {
-		logger.With("error", err.Error()).Error("error while creating ClusterRoleBinding")
+		logger.With("error", err.Error()).Error("error while creating ClusterRoleBinding", "clusterRoleBinding", manifests.ClusterRoleBinding.GetName())
 		return err
 	}
 
-	_, err = k8sClient.CoreV1().Services(namespace).Create(ctx, manifests.Service, metav1.CreateOptions{})
+	err = k8sutil.CreateOrUpdateService(ctx, logger, k8sClient, namespace, manifests.Service)
 	if err != nil {
-		logger.With("error", err.Error()).Error("error while creating Service")
+		logger.With("error", err.Error()).Error("error while creating/updating Service", "service", fmt.Sprintf("%s/%s", namespace, manifests.Service.GetName()))
 		return err
 	}
 
-	_, err = poClient.MonitoringV1().ServiceMonitors(namespace).Create(ctx, manifests.ServiceMonitor, metav1.CreateOptions{})
+	err = k8sutil.CreateOrUpdateServiceMonitor(ctx, logger, poClient, namespace, manifests.ServiceMonitor)
 	if err != nil {
-		logger.With("error", err.Error()).Error("error while creating ServiceMonitor")
+		logger.With("error", err.Error()).Error("error while creating ServiceMonitor", "serviceMonitor", fmt.Sprintf("%s/%s", namespace, manifests.ServiceMonitor.GetName()))
 		return err
 	}
 
-	_, err = k8sClient.AppsV1().Deployments(namespace).Create(ctx, manifests.Deployment, metav1.CreateOptions{})
+	err = k8sutil.CreateOrUpdateDeployment(ctx, logger, k8sClient, namespace, manifests.Deployment)
 	if err != nil {
-		logger.With("error", err.Error()).Error("error while creating Deployment")
+		logger.With("error", err.Error()).Error("error while creating Deployment", "deployment", fmt.Sprintf("%s/%s", namespace, manifests.Deployment.GetName()))
 		return err
 	}
 
-	logger.Debug("Prometheus Operator manifest created successfully.")
 	return nil
 }
