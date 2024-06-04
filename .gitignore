@@ -10,3 +10,6 @@ __pycache__
 .history/
 .vscode/
 tmp
+
+# Binary
+poctl
