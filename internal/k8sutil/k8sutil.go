@@ -15,12 +15,21 @@
 package k8sutil
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/user"
 	"path/filepath"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1Alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+	apiv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -58,4 +67,29 @@ func GetRestConfig(logger *slog.Logger, kubeConfig string) (*rest.Config, error)
 	}
 
 	return config, nil
+}
+
+func CrdDeserilezer(logger *slog.Logger, reader io.ReadCloser) (runtime.Object, error) {
+	sch := runtime.NewScheme()
+	_ = clientgoscheme.AddToScheme(sch)
+	_ = apiextv1beta1.AddToScheme(sch)
+	_ = apiv1.AddToScheme(sch)
+
+	_ = monitoringv1.AddToScheme(sch)
+	_ = monitoringv1Alpha1.AddToScheme(sch)
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(reader)
+
+	decode := serializer.NewCodecFactory(sch).UniversalDeserializer().Decode
+
+	obj, _, err := decode(buf.Bytes(), nil, nil)
+	if err != nil {
+		logger.Error("error while decoding CRD", "error", err)
+		return &runtime.Unknown{}, err
+	}
+
+	logger.Info(fmt.Sprintf("%+v", obj))
+
+	return obj, nil
 }

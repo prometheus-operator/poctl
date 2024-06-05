@@ -5,6 +5,7 @@ go 1.22.0
 require k8s.io/client-go v0.30.1
 
 require (
+	github.com/google/go-querystring v1.1.0 // indirect
 	k8s.io/apiextensions-apiserver v0.30.1 // indirect
 	sigs.k8s.io/controller-runtime v0.18.2 // indirect
 )
@@ -52,6 +53,7 @@ require (
 )
 
 require (
+	github.com/google/go-github/v62 v62.0.0
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/prometheus-operator/prometheus-operator/pkg/client v0.74.0
 )

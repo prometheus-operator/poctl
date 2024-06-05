@@ -20,12 +20,17 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/google/go-github/v62/github"
 	"github.com/prometheus-operator/poctl/internal/builder"
 	"github.com/prometheus-operator/poctl/internal/k8sutil"
 	"github.com/prometheus-operator/poctl/internal/log"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -54,10 +59,21 @@ var stackCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		kdynamicClient, err := dynamic.NewForConfig(restConfig)
+		if err != nil {
+			logger.With("error", err.Error()).Error("error while creating dynamic client")
+			os.Exit(1)
+		}
+
 		mclient, err := monitoringclient.NewForConfig(restConfig)
 		if err != nil {
 			logger.With("error", err.Error()).Error("error while creating Prometheus Operator client")
 			os.Exit(1)
+		}
+
+		gitHubClient := github.NewClient(nil)
+
+		if err := installCRDs(cmd.Context(), logger, kdynamicClient, gitHubClient); err != nil {
 		}
 
 		if err := createPrometheusOperator(cmd.Context(), logger, kclient, mclient, metav1.NamespaceDefault, "0.73.2"); err != nil {
@@ -81,6 +97,46 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// stackCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+func installCRDs(
+	ctx context.Context,
+	logger *slog.Logger,
+	k8sClient *dynamic.DynamicClient,
+	gitHubClient *github.Client) error {
+
+	reader, _, err := gitHubClient.Repositories.DownloadContents(
+		ctx,
+		"prometheus-operator",
+		"prometheus-operator",
+		"example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml",
+		&github.RepositoryContentGetOptions{
+			Ref: "v0.73.2", //TODO: it should be a flag
+		})
+
+	if err != nil {
+		logger.Error("error while downloading CRDs", "error", err)
+		return err
+	}
+
+	crds, err := k8sutil.CrdDeserilezer(logger, reader)
+	if err != nil {
+		logger.Error("error while deserializing CRDs", "error", err)
+		return err
+	}
+
+	unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(crds)
+	if err != nil {
+		return err
+	}
+
+	nodeResource := schema.GroupVersionResource{Group: "apiextensions.k8s.io", Version: "v1", Resource: "customresourcedefinitions"}
+	createdUnstructuredObj, err := k8sClient.Resource(nodeResource).Create(ctx, &unstructured.Unstructured{Object: unstructuredObj}, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+	fmt.Print(createdUnstructuredObj)
+	return nil
 }
 
 func createPrometheusOperator(
