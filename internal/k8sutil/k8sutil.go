@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	monitoringv1Alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	apiv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -76,10 +76,14 @@ func CrdDeserilezer(logger *slog.Logger, reader io.ReadCloser) (runtime.Object, 
 	_ = apiv1.AddToScheme(sch)
 
 	_ = monitoringv1.AddToScheme(sch)
-	_ = monitoringv1Alpha1.AddToScheme(sch)
+	_ = monitoringv1alpha1.AddToScheme(sch)
 
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(reader)
+	_, err := buf.ReadFrom(reader)
+	if err != nil {
+		logger.Error("error while reading CRD", "error", err)
+		return &runtime.Unknown{}, err
+	}
 
 	decode := serializer.NewCodecFactory(sch).UniversalDeserializer().Decode
 
@@ -88,8 +92,6 @@ func CrdDeserilezer(logger *slog.Logger, reader io.ReadCloser) (runtime.Object, 
 		logger.Error("error while decoding CRD", "error", err)
 		return &runtime.Unknown{}, err
 	}
-
-	logger.Info(fmt.Sprintf("%+v", obj))
 
 	return obj, nil
 }
