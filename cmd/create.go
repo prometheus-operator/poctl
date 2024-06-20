@@ -27,8 +27,11 @@ var createCmd = &cobra.Command{
 	// Run: func(cmd *cobra.Command, args []string) { },
 }
 
+const LatestVersion = "0.74.0"
+
 func init() {
 	rootCmd.AddCommand(createCmd)
+	createCmd.PersistentFlags().String("version", LatestVersion, "Prometheus Operator version")
 
 	// Here you will define your flags and configuration settings.
 

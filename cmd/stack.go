@@ -20,54 +20,41 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/google/go-github/v62/github"
 	"github.com/prometheus-operator/poctl/internal/builder"
 	"github.com/prometheus-operator/poctl/internal/k8sutil"
 	"github.com/prometheus-operator/poctl/internal/log"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 )
 
-// stackCmd represents the stack command.
-var stackCmd = &cobra.Command{
-	Use:   "stack",
-	Short: "create a stack of Prometheus Operator resources.",
-	Long:  `create a stack of Prometheus Operator resources.`,
-	Run: func(cmd *cobra.Command, _ []string) {
-		logger, err := log.NewLogger()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+var (
+	stackCmd = &cobra.Command{
+		Use:   "stack",
+		Short: "create a stack of Prometheus Operator resources.",
+		Long:  `create a stack of Prometheus Operator resources.`,
+		Run:   run,
+	}
 
-		//TODO(nicolastakashi): Replace it when the PR #6623 is merged
-		restConfig, err := k8sutil.GetRestConfig(logger, kubeconfig)
-		if err != nil {
-			logger.With("error", err.Error()).Error("error while getting kubeconfig")
-			os.Exit(1)
-		}
-
-		kclient, err := kubernetes.NewForConfig(restConfig)
-		if err != nil {
-			logger.With("error", err.Error()).Error("error while creating k8s client")
-			os.Exit(1)
-		}
-
-		mclient, err := monitoringclient.NewForConfig(restConfig)
-		if err != nil {
-			logger.With("error", err.Error()).Error("error while creating Prometheus Operator client")
-			os.Exit(1)
-		}
-
-		if err := createPrometheusOperator(cmd.Context(), logger, kclient, mclient, metav1.NamespaceDefault, "0.73.2"); err != nil {
-			logger.With("error", err.Error()).Error("error while creating Prometheus Operator")
-			os.Exit(1)
-		}
-
-		logger.Info("Prometheus Operator stack created successfully.")
-	},
-}
+	crds = []string{
+		"alertmanagers",
+		"alertmanagerconfigs",
+		"podmonitors",
+		"probes",
+		"prometheusagents",
+		"prometheuses",
+		"prometheusrules",
+		"scrapeconfigs",
+		"servicemonitors",
+		"thanosrulers",
+	}
+)
 
 func init() {
 	createCmd.AddCommand(stackCmd)
@@ -81,6 +68,114 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// stackCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+func run(cmd *cobra.Command, _ []string) {
+	logger, err := log.NewLogger()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	version, err := cmd.Flags().GetString("version")
+	if err != nil {
+		logger.With("error", err.Error()).Error("error while getting version flag")
+		os.Exit(1)
+	}
+
+	logger.Info(version)
+
+	//TODO(nicolastakashi): Replace it when the PR #6623 is merged
+	restConfig, err := k8sutil.GetRestConfig(logger, kubeconfig)
+	if err != nil {
+		logger.With("error", err.Error()).Error("error while getting kubeconfig")
+		os.Exit(1)
+	}
+
+	kclient, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		logger.With("error", err.Error()).Error("error while creating k8s client")
+		os.Exit(1)
+	}
+
+	kdynamicClient, err := dynamic.NewForConfig(restConfig)
+	if err != nil {
+		logger.With("error", err.Error()).Error("error while creating dynamic client")
+		os.Exit(1)
+	}
+
+	mclient, err := monitoringclient.NewForConfig(restConfig)
+	if err != nil {
+		logger.With("error", err.Error()).Error("error while creating Prometheus Operator client")
+		os.Exit(1)
+	}
+
+	gitHubClient := github.NewClient(nil)
+
+	if err := installCRDs(cmd.Context(), logger, version, kdynamicClient, gitHubClient); err != nil {
+		logger.With("error", err.Error()).Error("error while installing CRDs")
+		os.Exit(1)
+	}
+
+	if err := createPrometheusOperator(cmd.Context(), logger, kclient, mclient, metav1.NamespaceDefault, version); err != nil {
+		logger.With("error", err.Error()).Error("error while creating Prometheus Operator")
+		os.Exit(1)
+	}
+
+	logger.Info("Prometheus Operator stack created successfully.")
+}
+
+func installCRDs(
+	ctx context.Context,
+	logger *slog.Logger,
+	version string,
+	k8sClient *dynamic.DynamicClient,
+	gitHubClient *github.Client) error {
+
+	nodeResource := schema.GroupVersionResource{Group: "apiextensions.k8s.io", Version: "v1", Resource: "customresourcedefinitions"}
+
+	for _, crd := range crds {
+		l := logger.With("crd", crd)
+
+		reader, _, err := gitHubClient.Repositories.DownloadContents(
+			ctx,
+			"prometheus-operator",
+			"prometheus-operator",
+			fmt.Sprintf("example/prometheus-operator-crd/monitoring.coreos.com_%s.yaml", crd),
+			&github.RepositoryContentGetOptions{
+				Ref: fmt.Sprintf("v%s", version),
+			})
+
+		if err != nil {
+			l.Error("error while downloading crds", "error", err)
+			return err
+		}
+
+		crds, err := k8sutil.CrdDeserilezer(logger, reader)
+		if err != nil {
+			l.Error("error while deserializing crds", "error", err)
+			return err
+		}
+
+		unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(crds)
+		if err != nil {
+			l.Error("error while converting CRDs to Unstructured", "error", err)
+			return err
+		}
+
+		_, err = k8sClient.Resource(nodeResource).Apply(ctx, fmt.Sprintf("%s.monitoring.coreos.com", crd), &unstructured.Unstructured{Object: unstructuredObj}, metav1.ApplyOptions{
+			FieldManager: "application/apply-patch",
+		})
+
+		if err != nil {
+			l.Error("error while applying", "error", err)
+			return err
+		}
+
+		logger.Info("applied successfully", "CRD", crd)
+	}
+
+	return nil
 }
 
 func createPrometheusOperator(
