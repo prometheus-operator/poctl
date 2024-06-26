@@ -163,9 +163,7 @@ func installCRDs(
 			return err
 		}
 
-		_, err = k8sClient.Resource(nodeResource).Apply(ctx, fmt.Sprintf("%s.monitoring.coreos.com", crd), &unstructured.Unstructured{Object: unstructuredObj}, metav1.ApplyOptions{
-			FieldManager: "application/apply-patch",
-		})
+		_, err = k8sClient.Resource(nodeResource).Apply(ctx, fmt.Sprintf("%s.monitoring.coreos.com", crd), &unstructured.Unstructured{Object: unstructuredObj}, k8sutil.ApplyOption)
 
 		if err != nil {
 			l.Error("error while applying", "error", err)
@@ -193,39 +191,39 @@ func createPrometheusOperator(
 		WithDeployment().
 		Build()
 
-	err := k8sutil.CreateOrUpdateServiceAccount(ctx, logger, k8sClient, namespace, manifests.ServiceAccount)
+	_, err := k8sClient.CoreV1().ServiceAccounts(namespace).Apply(ctx, manifests.ServiceAccount, k8sutil.ApplyOption)
 	if err != nil {
-		logger.With("error", err.Error()).Error("error while creating ServiceAccount", "serviceAccount", fmt.Sprintf("%s/%s", namespace, manifests.ServiceAccount.GetName()))
+		logger.ErrorContext(ctx, "error while creating ServiceAccount", "error", err.Error())
 		return err
 	}
 
-	err = k8sutil.CreateOrUpdateClusterRole(ctx, logger, k8sClient, manifests.ClusterRole)
+	_, err = k8sClient.RbacV1().ClusterRoles().Apply(ctx, manifests.ClusterRole, k8sutil.ApplyOption)
 	if err != nil {
-		logger.With("error", err.Error()).Error("error while creating ClusterRole", "clusterRole", manifests.ClusterRole.GetName())
+		logger.ErrorContext(ctx, "error while creating ClusterRole", "error", err.Error())
 		return err
 	}
 
-	err = k8sutil.CreateOrUpdateClusterRoleBinding(ctx, logger, k8sClient, manifests.ClusterRoleBinding)
+	_, err = k8sClient.RbacV1().ClusterRoleBindings().Apply(ctx, manifests.ClusterRoleBinding, k8sutil.ApplyOption)
 	if err != nil {
-		logger.With("error", err.Error()).Error("error while creating ClusterRoleBinding", "clusterRoleBinding", manifests.ClusterRoleBinding.GetName())
+		logger.ErrorContext(ctx, "error while creating ClusterRoleBinding", "error", err.Error())
 		return err
 	}
 
-	err = k8sutil.CreateOrUpdateService(ctx, logger, k8sClient, namespace, manifests.Service)
+	_, err = k8sClient.CoreV1().Services(namespace).Apply(ctx, manifests.Service, k8sutil.ApplyOption)
 	if err != nil {
-		logger.With("error", err.Error()).Error("error while creating/updating Service", "service", fmt.Sprintf("%s/%s", namespace, manifests.Service.GetName()))
+		logger.ErrorContext(ctx, "error while creating Service", "error", err.Error())
 		return err
 	}
 
-	err = k8sutil.CreateOrUpdateServiceMonitor(ctx, logger, poClient, namespace, manifests.ServiceMonitor)
+	_, err = poClient.MonitoringV1().ServiceMonitors(namespace).Apply(ctx, manifests.ServiceMonitor, k8sutil.ApplyOption)
 	if err != nil {
-		logger.With("error", err.Error()).Error("error while creating ServiceMonitor", "serviceMonitor", fmt.Sprintf("%s/%s", namespace, manifests.ServiceMonitor.GetName()))
+		logger.ErrorContext(ctx, "error while creating ServiceMonitor", "error", err.Error())
 		return err
 	}
 
-	err = k8sutil.CreateOrUpdateDeployment(ctx, logger, k8sClient, namespace, manifests.Deployment)
+	_, err = k8sClient.AppsV1().Deployments(namespace).Apply(ctx, manifests.Deployment, k8sutil.ApplyOption)
 	if err != nil {
-		logger.With("error", err.Error()).Error("error while creating Deployment", "deployment", fmt.Sprintf("%s/%s", namespace, manifests.Deployment.GetName()))
+		logger.ErrorContext(ctx, "error while creating Deployment", "error", err.Error())
 		return err
 	}
 
