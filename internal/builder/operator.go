@@ -17,13 +17,15 @@ package builder
 import (
 	"fmt"
 
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	appsv1 "k8s.io/api/apps/v1"
-	apiv1 "k8s.io/api/core/v1"
-	rbac "k8s.io/api/rbac/v1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/client/applyconfiguration/monitoring/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	applyCofongiAppsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
+	applyConfigCorev1 "k8s.io/client-go/applyconfigurations/core/v1"
+	applyConfigMetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
+	applyConfigRbacv1 "k8s.io/client-go/applyconfigurations/rbac/v1"
 	"k8s.io/utils/ptr"
 )
 
@@ -36,12 +38,12 @@ type OperatorBuilder struct {
 }
 
 type OperatorManifests struct {
-	Deployment         *appsv1.Deployment
-	Service            *apiv1.Service
-	ServiceAccount     *apiv1.ServiceAccount
-	ClusterRole        *rbac.ClusterRole
-	ClusterRoleBinding *rbac.ClusterRoleBinding
-	ServiceMonitor     *monitoringv1.ServiceMonitor
+	Deployment         *applyCofongiAppsv1.DeploymentApplyConfiguration
+	Service            *applyConfigCorev1.ServiceApplyConfiguration
+	ServiceAccount     *applyConfigCorev1.ServiceAccountApplyConfiguration
+	ClusterRole        *applyConfigRbacv1.ClusterRoleApplyConfiguration
+	ClusterRoleBinding *applyConfigRbacv1.ClusterRoleBindingApplyConfiguration
+	ServiceMonitor     *monitoringv1.ServiceMonitorApplyConfiguration
 }
 
 func NewOperator(namespace, version string) *OperatorBuilder {
@@ -62,33 +64,52 @@ func NewOperator(namespace, version string) *OperatorBuilder {
 }
 
 func (o *OperatorBuilder) WithServiceAccount() *OperatorBuilder {
-	o.manifets.ServiceAccount = &apiv1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "prometheus-operator",
+	o.manifets.ServiceAccount = &applyConfigCorev1.ServiceAccountApplyConfiguration{
+		TypeMetaApplyConfiguration: applyConfigMetav1.TypeMetaApplyConfiguration{
+			Kind:       ptr.To("ServiceAccount"),
+			APIVersion: ptr.To("v1"),
+		},
+		ObjectMetaApplyConfiguration: &applyConfigMetav1.ObjectMetaApplyConfiguration{
+			Name:      ptr.To("prometheus-operator"),
 			Labels:    o.labels,
-			Namespace: o.namespace,
+			Namespace: ptr.To(o.namespace),
 		},
 	}
 	return o
 }
 
 func (o *OperatorBuilder) WithClusterRole() *OperatorBuilder {
-	o.manifets.ClusterRole = &rbac.ClusterRole{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "prometheus-operator",
-			Labels:    o.labels,
-			Namespace: o.namespace,
+	o.manifets.ClusterRole = &applyConfigRbacv1.ClusterRoleApplyConfiguration{
+		TypeMetaApplyConfiguration: applyConfigMetav1.TypeMetaApplyConfiguration{
+			Kind:       ptr.To("ClusterRole"),
+			APIVersion: ptr.To("rbac.authorization.k8s.io/v1"),
 		},
-		Rules: []rbac.PolicyRule{
+		ObjectMetaApplyConfiguration: &applyConfigMetav1.ObjectMetaApplyConfiguration{
+			Name:   ptr.To("prometheus-operator"),
+			Labels: o.labels,
+		},
+		Rules: []applyConfigRbacv1.PolicyRuleApplyConfiguration{
 			{
 				APIGroups: []string{"monitoring.coreos.com"},
 				Resources: []string{
-					"alertmanagers", "alertmanagers/finalizers", "alertmanagers/status",
-					"alertmanagerconfigs", "prometheuses", "prometheuses/finalizers",
-					"prometheuses/status", "prometheusagents", "prometheusagents/finalizers",
-					"prometheusagents/status", "thanosrulers", "thanosrulers/finalizers",
-					"thanosrulers/status", "scrapeconfigs", "servicemonitors", "podmonitors",
-					"probes", "prometheusrules",
+					"alertmanagers",
+					"alertmanagers/finalizers",
+					"alertmanagers/status",
+					"alertmanagerconfigs",
+					"prometheuses",
+					"prometheuses/finalizers",
+					"prometheuses/status",
+					"prometheusagents",
+					"prometheusagents/finalizers",
+					"prometheusagents/status",
+					"thanosrulers",
+					"thanosrulers/finalizers",
+					"thanosrulers/status",
+					"scrapeconfigs",
+					"servicemonitors",
+					"podmonitors",
+					"probes",
+					"prometheusrules",
 				},
 				Verbs: []string{"*"},
 			},
@@ -143,22 +164,26 @@ func (o *OperatorBuilder) WithClusterRole() *OperatorBuilder {
 }
 
 func (o *OperatorBuilder) WithClusterRoleBinding() *OperatorBuilder {
-	o.manifets.ClusterRoleBinding = &rbac.ClusterRoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "prometheus-operator",
+	o.manifets.ClusterRoleBinding = &applyConfigRbacv1.ClusterRoleBindingApplyConfiguration{
+		TypeMetaApplyConfiguration: applyConfigMetav1.TypeMetaApplyConfiguration{
+			Kind:       ptr.To("ClusterRoleBinding"),
+			APIVersion: ptr.To("rbac.authorization.k8s.io/v1"),
+		},
+		ObjectMetaApplyConfiguration: &applyConfigMetav1.ObjectMetaApplyConfiguration{
+			Name:      ptr.To("prometheus-operator"),
 			Labels:    o.labels,
-			Namespace: o.namespace,
+			Namespace: ptr.To(o.namespace),
 		},
-		RoleRef: rbac.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "ClusterRole",
-			Name:     "prometheus-operator",
+		RoleRef: &applyConfigRbacv1.RoleRefApplyConfiguration{
+			APIGroup: ptr.To("rbac.authorization.k8s.io"),
+			Kind:     ptr.To("ClusterRole"),
+			Name:     ptr.To("prometheus-operator"),
 		},
-		Subjects: []rbac.Subject{
+		Subjects: []applyConfigRbacv1.SubjectApplyConfiguration{
 			{
-				Kind:      "ServiceAccount",
+				Kind:      ptr.To("ServiceAccount"),
 				Name:      o.manifets.ServiceAccount.Name,
-				Namespace: o.namespace,
+				Namespace: ptr.To(o.namespace),
 			},
 		},
 	}
@@ -166,63 +191,65 @@ func (o *OperatorBuilder) WithClusterRoleBinding() *OperatorBuilder {
 }
 
 func (o *OperatorBuilder) WithDeployment() *OperatorBuilder {
-	o.manifets.Deployment = &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "prometheus-operator",
-			Labels:    o.labels,
-			Namespace: o.namespace,
+	o.manifets.Deployment = &applyCofongiAppsv1.DeploymentApplyConfiguration{
+		TypeMetaApplyConfiguration: applyConfigMetav1.TypeMetaApplyConfiguration{
+			Kind:       ptr.To("Deployment"),
+			APIVersion: ptr.To("apps/v1"),
 		},
-		Spec: appsv1.DeploymentSpec{
+		ObjectMetaApplyConfiguration: &applyConfigMetav1.ObjectMetaApplyConfiguration{
+			Name:      ptr.To("prometheus-operator"),
+			Labels:    o.labels,
+			Namespace: ptr.To(o.namespace),
+		},
+		Spec: &applyCofongiAppsv1.DeploymentSpecApplyConfiguration{
 			Replicas: ptr.To(int32(1)),
-			Selector: &metav1.LabelSelector{
+			Selector: &applyConfigMetav1.LabelSelectorApplyConfiguration{
 				MatchLabels: o.labelSelectors,
 			},
-			Template: apiv1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
+			Template: &applyConfigCorev1.PodTemplateSpecApplyConfiguration{
+				ObjectMetaApplyConfiguration: &applyConfigMetav1.ObjectMetaApplyConfiguration{
 					Labels: o.labels,
 					Annotations: map[string]string{
 						"kubectl.kubernetes.io/default-container": "prometheus-operator",
 					},
 				},
-				Spec: apiv1.PodSpec{
+				Spec: &applyConfigCorev1.PodSpecApplyConfiguration{
 					AutomountServiceAccountToken: ptr.To(true),
-					Containers: []apiv1.Container{
+					Containers: []applyConfigCorev1.ContainerApplyConfiguration{
 						{
-							Name:  "prometheus-operator",
-							Image: fmt.Sprintf("quay.io/prometheus-operator/prometheus-operator:v%s", o.version),
+							Name:  ptr.To("prometheus-operator"),
+							Image: ptr.To(fmt.Sprintf("quay.io/prometheus-operator/prometheus-operator:v%s", o.version)),
 							Args: []string{
 								"--kubelet-service=kube-system/kubelet",
 								fmt.Sprintf("--prometheus-config-reloader=quay.io/prometheus-operator/prometheus-config-reloader:v%s", o.version),
 							},
-							Env: []apiv1.EnvVar{
+							Env: []applyConfigCorev1.EnvVarApplyConfiguration{
 								{
-									Name:  "GOGC",
-									Value: "30",
+									Name:  ptr.To("GOGC"),
+									Value: ptr.To("30"),
 								},
 							},
-							Ports: []apiv1.ContainerPort{
+							Ports: []applyConfigCorev1.ContainerPortApplyConfiguration{
 								{
-									Name:          "http",
-									ContainerPort: 8080,
+									Name:          ptr.To("http"),
+									ContainerPort: ptr.To(int32(8080)),
 								},
 							},
-							Resources: apiv1.ResourceRequirements{
-								Requests: apiv1.ResourceList{
-									apiv1.ResourceCPU:    resource.MustParse("100m"),
-									apiv1.ResourceMemory: resource.MustParse("100Mi"),
+							Resources: &applyConfigCorev1.ResourceRequirementsApplyConfiguration{
+								Requests: &corev1.ResourceList{
+									"cpu":    resource.MustParse("100m"),
+									"memory": resource.MustParse("100Mi"),
 								},
-								Limits: apiv1.ResourceList{
-									apiv1.ResourceCPU:    resource.MustParse("200m"),
-									apiv1.ResourceMemory: resource.MustParse("200Mi"),
+								Limits: &corev1.ResourceList{
+									"cpu":    resource.MustParse("200m"),
+									"memory": resource.MustParse("200Mi"),
 								},
 							},
-							SecurityContext: &apiv1.SecurityContext{
+							SecurityContext: &applyConfigCorev1.SecurityContextApplyConfiguration{
 								ReadOnlyRootFilesystem:   ptr.To(true),
 								AllowPrivilegeEscalation: ptr.To(false),
-								Capabilities: &apiv1.Capabilities{
-									Drop: []apiv1.Capability{
-										"ALL",
-									},
+								Capabilities: &applyConfigCorev1.CapabilitiesApplyConfiguration{
+									Drop: []corev1.Capability{"ALL"},
 								},
 							},
 						},
@@ -230,11 +257,11 @@ func (o *OperatorBuilder) WithDeployment() *OperatorBuilder {
 					NodeSelector: map[string]string{
 						"kubernetes.io/os": "linux",
 					},
-					SecurityContext: &apiv1.PodSecurityContext{
+					SecurityContext: &applyConfigCorev1.PodSecurityContextApplyConfiguration{
 						RunAsNonRoot: ptr.To(true),
 						RunAsUser:    ptr.To(int64(65534)),
-						SeccompProfile: &apiv1.SeccompProfile{
-							Type: "RuntimeDefault",
+						SeccompProfile: &applyConfigCorev1.SeccompProfileApplyConfiguration{
+							Type: applyConfigCorev1.SeccompProfile().WithType("RuntimeDefault").Type,
 						},
 					},
 					ServiceAccountName: o.manifets.ServiceAccount.Name,
@@ -246,18 +273,22 @@ func (o *OperatorBuilder) WithDeployment() *OperatorBuilder {
 }
 
 func (o *OperatorBuilder) WithService() *OperatorBuilder {
-	o.manifets.Service = &apiv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "prometheus-operator",
-			Labels:    o.labels,
-			Namespace: o.namespace,
+	o.manifets.Service = &applyConfigCorev1.ServiceApplyConfiguration{
+		TypeMetaApplyConfiguration: applyConfigMetav1.TypeMetaApplyConfiguration{
+			Kind:       ptr.To("Service"),
+			APIVersion: ptr.To("v1"),
 		},
-		Spec: apiv1.ServiceSpec{
-			Ports: []apiv1.ServicePort{
+		ObjectMetaApplyConfiguration: &applyConfigMetav1.ObjectMetaApplyConfiguration{
+			Name:      ptr.To("prometheus-operator"),
+			Labels:    o.labels,
+			Namespace: ptr.To(o.namespace),
+		},
+		Spec: &applyConfigCorev1.ServiceSpecApplyConfiguration{
+			Ports: []applyConfigCorev1.ServicePortApplyConfiguration{
 				{
-					Name:        "http",
-					Port:        8080,
-					TargetPort:  intstr.FromString("http"),
+					Name:        ptr.To("http"),
+					Port:        ptr.To(int32(8080)),
+					TargetPort:  ptr.To(intstr.FromString("http")),
 					AppProtocol: ptr.To("http"),
 				},
 			},
@@ -268,20 +299,24 @@ func (o *OperatorBuilder) WithService() *OperatorBuilder {
 }
 
 func (o *OperatorBuilder) WithServiceMonitor() *OperatorBuilder {
-	o.manifets.ServiceMonitor = &monitoringv1.ServiceMonitor{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "prometheus-operator",
-			Labels:    o.labels,
-			Namespace: o.namespace,
+	o.manifets.ServiceMonitor = &monitoringv1.ServiceMonitorApplyConfiguration{
+		TypeMetaApplyConfiguration: applyConfigMetav1.TypeMetaApplyConfiguration{
+			Kind:       ptr.To("ServiceMonitor"),
+			APIVersion: ptr.To("monitoring.coreos.com/v1"),
 		},
-		Spec: monitoringv1.ServiceMonitorSpec{
-			Selector: metav1.LabelSelector{
+		ObjectMetaApplyConfiguration: &applyConfigMetav1.ObjectMetaApplyConfiguration{
+			Name:      ptr.To("prometheus-operator"),
+			Labels:    o.labels,
+			Namespace: ptr.To(o.namespace),
+		},
+		Spec: &monitoringv1.ServiceMonitorSpecApplyConfiguration{
+			Selector: &metav1.LabelSelector{
 				MatchLabels: o.labelSelectors,
 			},
-			Endpoints: []monitoringv1.Endpoint{
+			Endpoints: []monitoringv1.EndpointApplyConfiguration{
 				{
-					HonorLabels: true,
-					Port:        "http",
+					HonorLabels: ptr.To(true),
+					Port:        ptr.To("http"),
 				},
 			},
 		},
