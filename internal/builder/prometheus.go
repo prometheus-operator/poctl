@@ -158,6 +158,15 @@ func (p *PrometheusBuilder) WithPrometheus() *PrometheusBuilder {
 			},
 			RuleSelector:          &metav1.LabelSelector{},
 			RuleNamespaceSelector: &metav1.LabelSelector{},
+			Alerting: &monitoringv1.AlertingSpecApplyConfiguration{
+				Alertmanagers: []monitoringv1.AlertmanagerEndpointsApplyConfiguration{
+					{
+						Namespace: ptr.To(p.namespace),
+						Name:      ptr.To(AlertManagerName),
+						Port:      ptr.To(intstr.FromString("http-web")),
+					},
+				},
+			},
 		},
 	}
 	return p
