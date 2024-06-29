@@ -28,6 +28,7 @@ import (
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -39,7 +40,7 @@ var (
 		Use:   "stack",
 		Short: "create a stack of Prometheus Operator resources.",
 		Long:  `create a stack of Prometheus Operator resources.`,
-		Run:   run,
+		Run:   runStack,
 	}
 
 	crds = []string{
@@ -70,7 +71,7 @@ func init() {
 	// stackCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func run(cmd *cobra.Command, _ []string) {
+func runStack(cmd *cobra.Command, _ []string) {
 	logger, err := log.NewLogger()
 	if err != nil {
 		fmt.Println(err)
@@ -124,6 +125,11 @@ func run(cmd *cobra.Command, _ []string) {
 
 	if err := createPrometheus(cmd.Context(), logger, kclient, mclient, metav1.NamespaceDefault); err != nil {
 		logger.With("error", err.Error()).Error("error while creating Prometheus")
+		os.Exit(1)
+	}
+
+	if err := createAlertManager(cmd.Context(), logger, kclient, mclient, metav1.NamespaceDefault); err != nil {
+		logger.With("error", err.Error()).Error("error while creating AlertManager")
 		os.Exit(1)
 	}
 
@@ -271,6 +277,46 @@ func createPrometheus(
 	_, err = poClient.MonitoringV1().Prometheuses(namespace).Apply(ctx, manifests.Prometheus, k8sutil.ApplyOption)
 	if err != nil {
 		logger.ErrorContext(ctx, "error while creating Prometheus", "error", err.Error())
+		return err
+	}
+
+	_, err = k8sClient.CoreV1().Services(namespace).Apply(ctx, manifests.Service, k8sutil.ApplyOption)
+	if err != nil {
+		logger.ErrorContext(ctx, "error while creating Service", "error", err.Error())
+		return err
+	}
+
+	_, err = poClient.MonitoringV1().ServiceMonitors(namespace).Apply(ctx, manifests.ServiceMonitor, k8sutil.ApplyOption)
+	if err != nil {
+		logger.ErrorContext(ctx, "error while creating ServiceMonitor", "error", err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func createAlertManager(
+	ctx context.Context,
+	logger *slog.Logger,
+	k8sClient *kubernetes.Clientset,
+	poClient *monitoringclient.Clientset,
+	namespace string) error {
+	manifests := builder.NewAlertManager(namespace).
+		WithServiceAccount().
+		WithAlertManager().
+		WithService().
+		WithServiceMonitor().
+		Build()
+
+	_, err := k8sClient.CoreV1().ServiceAccounts(namespace).Apply(ctx, manifests.ServiceAccount, k8sutil.ApplyOption)
+	if err != nil {
+		logger.ErrorContext(ctx, "error while creating ServiceAccount", "error", err.Error())
+		return err
+	}
+
+	_, err = poClient.MonitoringV1().Alertmanagers(namespace).Apply(ctx, manifests.AlertManager, k8sutil.ApplyOption)
+	if err != nil {
+		logger.ErrorContext(ctx, "error while creating AlertManager", "error", err.Error())
 		return err
 	}
 
