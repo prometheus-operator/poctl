@@ -28,6 +28,7 @@ import (
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -39,7 +40,7 @@ var (
 		Use:   "stack",
 		Short: "create a stack of Prometheus Operator resources.",
 		Long:  `create a stack of Prometheus Operator resources.`,
-		Run:   run,
+		Run:   runStack,
 	}
 
 	crds = []string{
@@ -70,7 +71,7 @@ func init() {
 	// stackCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func run(cmd *cobra.Command, _ []string) {
+func runStack(cmd *cobra.Command, _ []string) {
 	logger, err := log.NewLogger()
 	if err != nil {
 		fmt.Println(err)
