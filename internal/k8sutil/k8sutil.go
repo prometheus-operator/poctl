@@ -25,11 +25,13 @@ import (
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	apiv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -53,22 +55,20 @@ func getKubeConfig() (string, error) {
 	return kubeConfig, nil
 }
 
-func GetRestConfig(logger *slog.Logger, kubeConfig string) (*rest.Config, error) {
+func GetRestConfig(kubeConfig string) (*rest.Config, error) {
 	var config *rest.Config
 	var err error
 
 	if kubeConfig == "" {
 		kubeConfig, err = getKubeConfig()
 		if err != nil {
-			logger.With("error", err.Error()).Error("error while getting kubeconfig")
-			return nil, err
+			return nil, fmt.Errorf("error while getting kubeconfig: %v", err)
 		}
 	}
 
 	config, err = clientcmd.BuildConfigFromFlags("", kubeConfig)
 	if err != nil {
-		logger.With("error", err.Error()).Error("error while creating k8s client config")
-		return nil, err
+		return nil, fmt.Errorf("error while creating k8s client config: %v", err)
 	}
 
 	return config, nil
@@ -99,4 +99,23 @@ func CrdDeserilezer(logger *slog.Logger, reader io.ReadCloser) (runtime.Object, 
 	}
 
 	return obj, nil
+}
+
+func GetClientSets(kubeconfig string) (*kubernetes.Clientset, *monitoringclient.Clientset, error) {
+	restConfig, err := GetRestConfig(kubeconfig)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error while getting k8s client config: %v", err)
+
+	}
+
+	kclient, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error while creating k8s client: %v", err)
+	}
+
+	mclient, err := monitoringclient.NewForConfig(restConfig)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error while creating Prometheus Operator client: %v", err)
+	}
+	return kclient, mclient, nil
 }

@@ -49,22 +49,9 @@ func runServiceMonitor(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	//TODO(nicolastakashi): Replace it when the PR #6623 is merged.
-	restConfig, err := k8sutil.GetRestConfig(logger, kubeconfig)
+	kClient, mClient, err := k8sutil.GetClientSets(kubeconfig)
 	if err != nil {
-		logger.Error("error while getting kubeconfig", "err", err)
-		return err
-	}
-
-	kclient, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		logger.Error("error while creating k8s client", "err", err)
-		return err
-	}
-
-	mclient, err := monitoringclient.NewForConfig(restConfig)
-	if err != nil {
-		logger.Error("error while creating Prometheus Operator client", "err", err)
+		logger.Error("error while getting client sets", "err", err)
 		return err
 	}
 
@@ -73,7 +60,7 @@ func runServiceMonitor(_ *cobra.Command, _ []string) error {
 		return errors.New("service name is required")
 	}
 
-	err = createFromService(context.Background(), kclient, mclient, namespace, serviceName, port)
+	err = createFromService(context.Background(), kClient, mClient, namespace, serviceName, port)
 	if err != nil {
 		logger.Error("error while creating service monitor", "err", err)
 		return err
