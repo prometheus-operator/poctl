@@ -84,28 +84,20 @@ func runStack(cmd *cobra.Command, _ []string) error {
 
 	logger.Info(version)
 
-	//TODO(nicolastakashi): Replace it when the PR #6623 is merged
-	restConfig, err := k8sutil.GetRestConfig(logger, kubeconfig)
+	kClient, mClient, err := k8sutil.GetClientSets(kubeconfig)
+	if err != nil {
+		logger.Error("error while getting client sets", "err", err)
+		return err
+	}
+
+	restConfig, err := k8sutil.GetRestConfig(kubeconfig)
 	if err != nil {
 		logger.Error("error while getting kubeconfig", "error", err)
 		return err
 	}
-
-	kclient, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		logger.Error("error while creating k8s client", "error", err)
-		return err
-	}
-
 	kdynamicClient, err := dynamic.NewForConfig(restConfig)
 	if err != nil {
 		logger.Error("error while creating dynamic client", "error", err)
-		return err
-	}
-
-	mclient, err := monitoringclient.NewForConfig(restConfig)
-	if err != nil {
-		logger.Error("error while creating Prometheus Operator client", "error", err)
 		return err
 	}
 
@@ -116,17 +108,17 @@ func runStack(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if err := createPrometheusOperator(cmd.Context(), kclient, mclient, metav1.NamespaceDefault, version); err != nil {
+	if err := createPrometheusOperator(cmd.Context(), kClient, mClient, metav1.NamespaceDefault, version); err != nil {
 		logger.Error("error while creating Prometheus Operator", "error", err)
 		return err
 	}
 
-	if err := createPrometheus(cmd.Context(), kclient, mclient, metav1.NamespaceDefault); err != nil {
+	if err := createPrometheus(cmd.Context(), kClient, mClient, metav1.NamespaceDefault); err != nil {
 		logger.Error("error while creating Prometheus", "error", err)
 		return err
 	}
 
-	if err := createAlertManager(cmd.Context(), kclient, mclient, metav1.NamespaceDefault); err != nil {
+	if err := createAlertManager(cmd.Context(), kClient, mClient, metav1.NamespaceDefault); err != nil {
 		logger.Error("error while creating AlertManager", "error", err)
 		return err
 	}
