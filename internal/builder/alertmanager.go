@@ -17,10 +17,10 @@ package builder
 import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/client/applyconfiguration/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	applyConfigCorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	applyConfigMetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
+	metav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	"k8s.io/utils/ptr"
 )
 
@@ -81,8 +81,8 @@ func (a *AlertManagerBuilder) WithAlertManager() *AlertManagerBuilder {
 		Spec: &monitoringv1.AlertmanagerSpecApplyConfiguration{
 			ServiceAccountName:                  a.manifets.ServiceAccount.Name,
 			Replicas:                            ptr.To(int32(1)),
-			AlertmanagerConfigSelector:          &metav1.LabelSelector{},
-			AlertmanagerConfigNamespaceSelector: &metav1.LabelSelector{},
+			AlertmanagerConfigSelector:          &metav1.LabelSelectorApplyConfiguration{},
+			AlertmanagerConfigNamespaceSelector: &metav1.LabelSelectorApplyConfiguration{},
 		},
 	}
 	return a
@@ -131,7 +131,7 @@ func (a *AlertManagerBuilder) WithServiceMonitor() *AlertManagerBuilder {
 			Namespace: ptr.To(a.namespace),
 		},
 		Spec: &monitoringv1.ServiceMonitorSpecApplyConfiguration{
-			Selector: &metav1.LabelSelector{
+			Selector: &metav1.LabelSelectorApplyConfiguration{
 				MatchLabels: a.labelSelectors,
 			},
 			Endpoints: []monitoringv1.EndpointApplyConfiguration{

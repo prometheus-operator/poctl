@@ -101,6 +101,11 @@ func CrdDeserilezer(logger *slog.Logger, reader io.ReadCloser) (runtime.Object, 
 	return obj, nil
 }
 
+type ClientSets struct {
+	KClient kubernetes.Interface
+	MClient monitoringclient.Interface
+}
+
 func GetClientSets(kubeconfig string) (*kubernetes.Clientset, *monitoringclient.Clientset, error) {
 	restConfig, err := GetRestConfig(kubeconfig)
 	if err != nil {

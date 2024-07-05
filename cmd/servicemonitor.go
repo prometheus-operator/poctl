@@ -26,6 +26,7 @@ import (
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	applyConfigMetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/ptr"
 )
@@ -93,7 +94,7 @@ func createFromService(
 			Labels:    service.Labels,
 		},
 		Spec: &monitoringv1.ServiceMonitorSpecApplyConfiguration{
-			Selector: &metav1.LabelSelector{
+			Selector: &applyConfigMetav1.LabelSelectorApplyConfiguration{
 				MatchLabels: service.Spec.Selector,
 			},
 		},
