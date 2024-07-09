@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package create
 
 import (
 	"context"
@@ -22,23 +22,37 @@ import (
 	"github.com/google/go-github/v62/github"
 	"github.com/prometheus-operator/poctl/internal/builder"
 	"github.com/prometheus-operator/poctl/internal/k8sutil"
-	"github.com/prometheus-operator/poctl/internal/log"
-	"github.com/spf13/cobra"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-var (
-	stackCmd = &cobra.Command{
-		Use:   "stack",
-		Short: "create a stack of Prometheus Operator resources.",
-		Long:  `create a stack of Prometheus Operator resources.`,
-		RunE:  runStack,
+func RunCreateStack(ctx context.Context, logger *slog.Logger, clientSets *k8sutil.ClientSets, gitHubClient *github.Client, version string) error {
+	if err := installCRDs(ctx, logger, version, clientSets, gitHubClient); err != nil {
+		logger.Error("error while installing CRDs", "error", err)
+		return err
 	}
 
+	if err := createPrometheusOperator(ctx, clientSets, metav1.NamespaceDefault, version); err != nil {
+		logger.Error("error while creating Prometheus Operator", "error", err)
+		return err
+	}
+
+	if err := createPrometheus(ctx, clientSets, metav1.NamespaceDefault); err != nil {
+		logger.Error("error while creating Prometheus", "error", err)
+		return err
+	}
+
+	if err := createAlertManager(ctx, clientSets, metav1.NamespaceDefault); err != nil {
+		logger.Error("error while creating AlertManager", "error", err)
+		return err
+	}
+	return nil
+}
+
+var (
 	crds = []string{
 		"alertmanagers",
 		"alertmanagerconfigs",
@@ -52,66 +66,6 @@ var (
 		"thanosrulers",
 	}
 )
-
-func init() {
-	createCmd.AddCommand(stackCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// stackCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// stackCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-}
-
-func runStack(cmd *cobra.Command, _ []string) error {
-	logger, err := log.NewLogger()
-	if err != nil {
-		return fmt.Errorf("error while creating logger: %v", err)
-	}
-
-	version, err := cmd.Flags().GetString("version")
-	if err != nil {
-		logger.Error("error while getting version flag", "error", err)
-		return err
-	}
-
-	logger.Info(version)
-
-	clientSets, err := k8sutil.GetClientSets(kubeconfig)
-	if err != nil {
-		logger.Error("error while getting client sets", "err", err)
-		return err
-	}
-
-	gitHubClient := github.NewClient(nil)
-
-	if err := installCRDs(cmd.Context(), logger, version, clientSets, gitHubClient); err != nil {
-		logger.Error("error while installing CRDs", "error", err)
-		return err
-	}
-
-	if err := createPrometheusOperator(cmd.Context(), clientSets, metav1.NamespaceDefault, version); err != nil {
-		logger.Error("error while creating Prometheus Operator", "error", err)
-		return err
-	}
-
-	if err := createPrometheus(cmd.Context(), clientSets, metav1.NamespaceDefault); err != nil {
-		logger.Error("error while creating Prometheus", "error", err)
-		return err
-	}
-
-	if err := createAlertManager(cmd.Context(), clientSets, metav1.NamespaceDefault); err != nil {
-		logger.Error("error while creating AlertManager", "error", err)
-		return err
-	}
-
-	logger.Info("Prometheus Operator stack created successfully.")
-	return nil
-}
 
 func installCRDs(
 	ctx context.Context,
