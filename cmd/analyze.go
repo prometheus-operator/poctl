@@ -60,14 +60,9 @@ func run(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("namespace is required")
 	}
 
-	kClient, mClient, err := k8sutil.GetClientSets(kubeconfig)
+	clientSets, err := k8sutil.GetClientSets(kubeconfig)
 	if err != nil {
 		return fmt.Errorf("error while getting clientsets: %v", err)
-	}
-
-	clientSets := k8sutil.ClientSets{
-		KClient: kClient,
-		MClient: mClient,
 	}
 
 	switch AnalyzeKind(strings.ToLower(analyzerFlags.Kind)) {

@@ -22,12 +22,10 @@ import (
 	"github.com/prometheus-operator/poctl/internal/k8sutil"
 	"github.com/prometheus-operator/poctl/internal/log"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/client/applyconfiguration/monitoring/v1"
-	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	applyConfigMetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/ptr"
 )
 
@@ -50,7 +48,7 @@ func runServiceMonitor(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	kClient, mClient, err := k8sutil.GetClientSets(kubeconfig)
+	clientSets, err := k8sutil.GetClientSets(kubeconfig)
 	if err != nil {
 		logger.Error("error while getting client sets", "err", err)
 		return err
@@ -61,7 +59,7 @@ func runServiceMonitor(_ *cobra.Command, _ []string) error {
 		return errors.New("service name is required")
 	}
 
-	err = createFromService(context.Background(), kClient, mClient, namespace, serviceName, port)
+	err = createFromService(context.Background(), clientSets, namespace, serviceName, port)
 	if err != nil {
 		logger.Error("error while creating service monitor", "err", err)
 		return err
@@ -72,13 +70,12 @@ func runServiceMonitor(_ *cobra.Command, _ []string) error {
 
 func createFromService(
 	ctx context.Context,
-	k8sClient *kubernetes.Clientset,
-	mClient *monitoringclient.Clientset,
+	clientSets *k8sutil.ClientSets,
 	namespace string,
 	serviceName string,
 	port string) error {
 
-	service, err := k8sClient.CoreV1().Services(namespace).Get(ctx, serviceName, metav1.GetOptions{})
+	service, err := clientSets.KClient.CoreV1().Services(namespace).Get(ctx, serviceName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error while getting service %s: %v", serviceName, err)
 	}
@@ -111,7 +108,7 @@ func createFromService(
 		})
 	}
 
-	_, err = mClient.MonitoringV1().ServiceMonitors(namespace).Apply(ctx, svcMonitor, k8sutil.ApplyOption)
+	_, err = clientSets.MClient.MonitoringV1().ServiceMonitors(namespace).Apply(ctx, svcMonitor, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating service monitor %s: %v", serviceName, err)
 	}

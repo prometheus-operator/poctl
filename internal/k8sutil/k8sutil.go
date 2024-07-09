@@ -31,6 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -104,23 +105,34 @@ func CrdDeserilezer(logger *slog.Logger, reader io.ReadCloser) (runtime.Object, 
 type ClientSets struct {
 	KClient kubernetes.Interface
 	MClient monitoringclient.Interface
+	DClient dynamic.Interface
 }
 
-func GetClientSets(kubeconfig string) (*kubernetes.Clientset, *monitoringclient.Clientset, error) {
+func GetClientSets(kubeconfig string) (*ClientSets, error) {
 	restConfig, err := GetRestConfig(kubeconfig)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error while getting k8s client config: %v", err)
+		return nil, fmt.Errorf("error while getting k8s client config: %v", err)
 
 	}
 
 	kclient, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error while creating k8s client: %v", err)
+		return nil, fmt.Errorf("error while creating k8s client: %v", err)
 	}
 
 	mclient, err := monitoringclient.NewForConfig(restConfig)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error while creating Prometheus Operator client: %v", err)
+		return nil, fmt.Errorf("error while creating Prometheus Operator client: %v", err)
 	}
-	return kclient, mclient, nil
+
+	kdynamicClient, err := dynamic.NewForConfig(restConfig)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating dynamic client: %v", err)
+	}
+
+	return &ClientSets{
+		KClient: kclient,
+		MClient: mclient,
+		DClient: kdynamicClient,
+	}, nil
 }
