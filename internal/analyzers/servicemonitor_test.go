@@ -175,7 +175,7 @@ func TestServiceMonitorAnalyzer(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			clientSets := tc.getMockedClientSets(tc)
-			err := RunServiceMonitorAnalyzer(context.Background(), clientSets, tc.name, tc.namespace)
+			err := RunServiceMonitorAnalyzer(context.Background(), &clientSets, tc.name, tc.namespace)
 			if tc.shouldFail {
 				assert.Error(t, err)
 			} else {

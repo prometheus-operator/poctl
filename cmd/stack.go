@@ -23,15 +23,12 @@ import (
 	"github.com/prometheus-operator/poctl/internal/builder"
 	"github.com/prometheus-operator/poctl/internal/k8sutil"
 	"github.com/prometheus-operator/poctl/internal/log"
-	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
 )
 
 var (
@@ -84,41 +81,30 @@ func runStack(cmd *cobra.Command, _ []string) error {
 
 	logger.Info(version)
 
-	kClient, mClient, err := k8sutil.GetClientSets(kubeconfig)
+	clientSets, err := k8sutil.GetClientSets(kubeconfig)
 	if err != nil {
 		logger.Error("error while getting client sets", "err", err)
 		return err
 	}
 
-	restConfig, err := k8sutil.GetRestConfig(kubeconfig)
-	if err != nil {
-		logger.Error("error while getting kubeconfig", "error", err)
-		return err
-	}
-	kdynamicClient, err := dynamic.NewForConfig(restConfig)
-	if err != nil {
-		logger.Error("error while creating dynamic client", "error", err)
-		return err
-	}
-
 	gitHubClient := github.NewClient(nil)
 
-	if err := installCRDs(cmd.Context(), logger, version, kdynamicClient, gitHubClient); err != nil {
+	if err := installCRDs(cmd.Context(), logger, version, clientSets, gitHubClient); err != nil {
 		logger.Error("error while installing CRDs", "error", err)
 		return err
 	}
 
-	if err := createPrometheusOperator(cmd.Context(), kClient, mClient, metav1.NamespaceDefault, version); err != nil {
+	if err := createPrometheusOperator(cmd.Context(), clientSets, metav1.NamespaceDefault, version); err != nil {
 		logger.Error("error while creating Prometheus Operator", "error", err)
 		return err
 	}
 
-	if err := createPrometheus(cmd.Context(), kClient, mClient, metav1.NamespaceDefault); err != nil {
+	if err := createPrometheus(cmd.Context(), clientSets, metav1.NamespaceDefault); err != nil {
 		logger.Error("error while creating Prometheus", "error", err)
 		return err
 	}
 
-	if err := createAlertManager(cmd.Context(), kClient, mClient, metav1.NamespaceDefault); err != nil {
+	if err := createAlertManager(cmd.Context(), clientSets, metav1.NamespaceDefault); err != nil {
 		logger.Error("error while creating AlertManager", "error", err)
 		return err
 	}
@@ -131,7 +117,7 @@ func installCRDs(
 	ctx context.Context,
 	logger *slog.Logger,
 	version string,
-	k8sClient *dynamic.DynamicClient,
+	clientSets *k8sutil.ClientSets,
 	gitHubClient *github.Client) error {
 
 	nodeResource := schema.GroupVersionResource{Group: "apiextensions.k8s.io", Version: "v1", Resource: "customresourcedefinitions"}
@@ -160,7 +146,7 @@ func installCRDs(
 			return fmt.Errorf("error while converting CRDs to Unstructured: %v", err)
 		}
 
-		_, err = k8sClient.Resource(nodeResource).Apply(ctx, fmt.Sprintf("%s.monitoring.coreos.com", crd), &unstructured.Unstructured{Object: unstructuredObj}, k8sutil.ApplyOption)
+		_, err = clientSets.DClient.Resource(nodeResource).Apply(ctx, fmt.Sprintf("%s.monitoring.coreos.com", crd), &unstructured.Unstructured{Object: unstructuredObj}, k8sutil.ApplyOption)
 
 		if err != nil {
 			return fmt.Errorf("error while applying CRD: %v", err)
@@ -174,8 +160,7 @@ func installCRDs(
 
 func createPrometheusOperator(
 	ctx context.Context,
-	k8sClient *kubernetes.Clientset,
-	poClient *monitoringclient.Clientset,
+	clientSets *k8sutil.ClientSets,
 	namespace, version string) error {
 	manifests := builder.NewOperator(namespace, version).
 		WithServiceAccount().
@@ -186,32 +171,32 @@ func createPrometheusOperator(
 		WithDeployment().
 		Build()
 
-	_, err := k8sClient.CoreV1().ServiceAccounts(namespace).Apply(ctx, manifests.ServiceAccount, k8sutil.ApplyOption)
+	_, err := clientSets.KClient.CoreV1().ServiceAccounts(namespace).Apply(ctx, manifests.ServiceAccount, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating ServiceAccount: %v", err)
 	}
 
-	_, err = k8sClient.RbacV1().ClusterRoles().Apply(ctx, manifests.ClusterRole, k8sutil.ApplyOption)
+	_, err = clientSets.KClient.RbacV1().ClusterRoles().Apply(ctx, manifests.ClusterRole, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating ClusterRole: %v", err)
 	}
 
-	_, err = k8sClient.RbacV1().ClusterRoleBindings().Apply(ctx, manifests.ClusterRoleBinding, k8sutil.ApplyOption)
+	_, err = clientSets.KClient.RbacV1().ClusterRoleBindings().Apply(ctx, manifests.ClusterRoleBinding, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating ClusterRoleBinding: %v", err)
 	}
 
-	_, err = k8sClient.CoreV1().Services(namespace).Apply(ctx, manifests.Service, k8sutil.ApplyOption)
+	_, err = clientSets.KClient.CoreV1().Services(namespace).Apply(ctx, manifests.Service, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating Service: %v", err)
 	}
 
-	_, err = poClient.MonitoringV1().ServiceMonitors(namespace).Apply(ctx, manifests.ServiceMonitor, k8sutil.ApplyOption)
+	_, err = clientSets.MClient.MonitoringV1().ServiceMonitors(namespace).Apply(ctx, manifests.ServiceMonitor, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating ServiceMonitor: %v", err)
 	}
 
-	_, err = k8sClient.AppsV1().Deployments(namespace).Apply(ctx, manifests.Deployment, k8sutil.ApplyOption)
+	_, err = clientSets.KClient.AppsV1().Deployments(namespace).Apply(ctx, manifests.Deployment, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating Deployment: %v", err)
 	}
@@ -221,8 +206,7 @@ func createPrometheusOperator(
 
 func createPrometheus(
 	ctx context.Context,
-	k8sClient *kubernetes.Clientset,
-	poClient *monitoringclient.Clientset,
+	clientSets *k8sutil.ClientSets,
 	namespace string) error {
 	manifests := builder.NewPrometheus(namespace).
 		WithServiceAccount().
@@ -233,32 +217,32 @@ func createPrometheus(
 		WithPrometheus().
 		Build()
 
-	_, err := k8sClient.CoreV1().ServiceAccounts(namespace).Apply(ctx, manifests.ServiceAccount, k8sutil.ApplyOption)
+	_, err := clientSets.KClient.CoreV1().ServiceAccounts(namespace).Apply(ctx, manifests.ServiceAccount, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating ServiceAccount: %v", err)
 	}
 
-	_, err = k8sClient.RbacV1().ClusterRoles().Apply(ctx, manifests.ClusterRole, k8sutil.ApplyOption)
+	_, err = clientSets.KClient.RbacV1().ClusterRoles().Apply(ctx, manifests.ClusterRole, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating ClusterRole: %v", err)
 	}
 
-	_, err = k8sClient.RbacV1().ClusterRoleBindings().Apply(ctx, manifests.ClusterRoleBinding, k8sutil.ApplyOption)
+	_, err = clientSets.KClient.RbacV1().ClusterRoleBindings().Apply(ctx, manifests.ClusterRoleBinding, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating ClusterRoleBinding: %v", err)
 	}
 
-	_, err = poClient.MonitoringV1().Prometheuses(namespace).Apply(ctx, manifests.Prometheus, k8sutil.ApplyOption)
+	_, err = clientSets.MClient.MonitoringV1().Prometheuses(namespace).Apply(ctx, manifests.Prometheus, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating Prometheus: %v", err)
 	}
 
-	_, err = k8sClient.CoreV1().Services(namespace).Apply(ctx, manifests.Service, k8sutil.ApplyOption)
+	_, err = clientSets.KClient.CoreV1().Services(namespace).Apply(ctx, manifests.Service, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating Service: %v", err)
 	}
 
-	_, err = poClient.MonitoringV1().ServiceMonitors(namespace).Apply(ctx, manifests.ServiceMonitor, k8sutil.ApplyOption)
+	_, err = clientSets.MClient.MonitoringV1().ServiceMonitors(namespace).Apply(ctx, manifests.ServiceMonitor, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating ServiceMonitor: %v", err)
 	}
@@ -268,8 +252,7 @@ func createPrometheus(
 
 func createAlertManager(
 	ctx context.Context,
-	k8sClient *kubernetes.Clientset,
-	poClient *monitoringclient.Clientset,
+	clientSets *k8sutil.ClientSets,
 	namespace string) error {
 	manifests := builder.NewAlertManager(namespace).
 		WithServiceAccount().
@@ -278,22 +261,22 @@ func createAlertManager(
 		WithServiceMonitor().
 		Build()
 
-	_, err := k8sClient.CoreV1().ServiceAccounts(namespace).Apply(ctx, manifests.ServiceAccount, k8sutil.ApplyOption)
+	_, err := clientSets.KClient.CoreV1().ServiceAccounts(namespace).Apply(ctx, manifests.ServiceAccount, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating ServiceAccount: %v", err)
 	}
 
-	_, err = poClient.MonitoringV1().Alertmanagers(namespace).Apply(ctx, manifests.AlertManager, k8sutil.ApplyOption)
+	_, err = clientSets.MClient.MonitoringV1().Alertmanagers(namespace).Apply(ctx, manifests.AlertManager, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating AlertManager: %v", err)
 	}
 
-	_, err = k8sClient.CoreV1().Services(namespace).Apply(ctx, manifests.Service, k8sutil.ApplyOption)
+	_, err = clientSets.KClient.CoreV1().Services(namespace).Apply(ctx, manifests.Service, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating Service: %v", err)
 	}
 
-	_, err = poClient.MonitoringV1().ServiceMonitors(namespace).Apply(ctx, manifests.ServiceMonitor, k8sutil.ApplyOption)
+	_, err = clientSets.MClient.MonitoringV1().ServiceMonitors(namespace).Apply(ctx, manifests.ServiceMonitor, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating ServiceMonitor: %v", err)
 	}

@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func RunServiceMonitorAnalyzer(ctx context.Context, clientSets k8sutil.ClientSets, name, namespace string) error {
+func RunServiceMonitorAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets, name, namespace string) error {
 	serviceMonitor, err := clientSets.MClient.MonitoringV1().ServiceMonitors(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
