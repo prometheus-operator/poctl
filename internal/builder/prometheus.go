@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	applyConfigCorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	applyConfigMetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
-	metav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	applyConfigRbacv1 "k8s.io/client-go/applyconfigurations/rbac/v1"
 	"k8s.io/utils/ptr"
 )
@@ -145,19 +144,19 @@ func (p *PrometheusBuilder) WithPrometheus() *PrometheusBuilder {
 		Spec: &monitoringv1.PrometheusSpecApplyConfiguration{
 			CommonPrometheusFieldsApplyConfiguration: monitoringv1.CommonPrometheusFieldsApplyConfiguration{
 				ServiceAccountName:              p.manifests.ServiceAccount.Name,
-				ServiceMonitorSelector:          &metav1.LabelSelectorApplyConfiguration{},
-				ServiceMonitorNamespaceSelector: &metav1.LabelSelectorApplyConfiguration{},
-				PodMonitorSelector:              &metav1.LabelSelectorApplyConfiguration{},
-				PodMonitorNamespaceSelector:     &metav1.LabelSelectorApplyConfiguration{},
-				ProbeSelector:                   &metav1.LabelSelectorApplyConfiguration{},
-				ProbeNamespaceSelector:          &metav1.LabelSelectorApplyConfiguration{},
-				ScrapeConfigSelector:            &metav1.LabelSelectorApplyConfiguration{},
-				ScrapeConfigNamespaceSelector:   &metav1.LabelSelectorApplyConfiguration{},
+				ServiceMonitorSelector:          &applyConfigMetav1.LabelSelectorApplyConfiguration{},
+				ServiceMonitorNamespaceSelector: &applyConfigMetav1.LabelSelectorApplyConfiguration{},
+				PodMonitorSelector:              &applyConfigMetav1.LabelSelectorApplyConfiguration{},
+				PodMonitorNamespaceSelector:     &applyConfigMetav1.LabelSelectorApplyConfiguration{},
+				ProbeSelector:                   &applyConfigMetav1.LabelSelectorApplyConfiguration{},
+				ProbeNamespaceSelector:          &applyConfigMetav1.LabelSelectorApplyConfiguration{},
+				ScrapeConfigSelector:            &applyConfigMetav1.LabelSelectorApplyConfiguration{},
+				ScrapeConfigNamespaceSelector:   &applyConfigMetav1.LabelSelectorApplyConfiguration{},
 				ImagePullPolicy:                 ptr.To(corev1.PullIfNotPresent),
 				Replicas:                        ptr.To(int32(2)),
 			},
-			RuleSelector:          &metav1.LabelSelectorApplyConfiguration{},
-			RuleNamespaceSelector: &metav1.LabelSelectorApplyConfiguration{},
+			RuleSelector:          &applyConfigMetav1.LabelSelectorApplyConfiguration{},
+			RuleNamespaceSelector: &applyConfigMetav1.LabelSelectorApplyConfiguration{},
 			Alerting: &monitoringv1.AlertingSpecApplyConfiguration{
 				Alertmanagers: []monitoringv1.AlertmanagerEndpointsApplyConfiguration{
 					{
@@ -209,7 +208,7 @@ func (p *PrometheusBuilder) WithServiceMonitor() *PrometheusBuilder {
 			Namespace: ptr.To(p.namespace),
 		},
 		Spec: &monitoringv1.ServiceMonitorSpecApplyConfiguration{
-			Selector: &metav1.LabelSelectorApplyConfiguration{
+			Selector: &applyConfigMetav1.LabelSelectorApplyConfiguration{
 				MatchLabels: p.labelSelectors,
 			},
 			Endpoints: []monitoringv1.EndpointApplyConfiguration{
