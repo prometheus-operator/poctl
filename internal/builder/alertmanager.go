@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	applyConfigCorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	applyConfigMetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
-	metav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	"k8s.io/utils/ptr"
 )
 
@@ -81,8 +80,8 @@ func (a *AlertManagerBuilder) WithAlertManager() *AlertManagerBuilder {
 		Spec: &monitoringv1.AlertmanagerSpecApplyConfiguration{
 			ServiceAccountName:                  a.manifets.ServiceAccount.Name,
 			Replicas:                            ptr.To(int32(1)),
-			AlertmanagerConfigSelector:          &metav1.LabelSelectorApplyConfiguration{},
-			AlertmanagerConfigNamespaceSelector: &metav1.LabelSelectorApplyConfiguration{},
+			AlertmanagerConfigSelector:          &applyConfigMetav1.LabelSelectorApplyConfiguration{},
+			AlertmanagerConfigNamespaceSelector: &applyConfigMetav1.LabelSelectorApplyConfiguration{},
 		},
 	}
 	return a
@@ -131,7 +130,7 @@ func (a *AlertManagerBuilder) WithServiceMonitor() *AlertManagerBuilder {
 			Namespace: ptr.To(a.namespace),
 		},
 		Spec: &monitoringv1.ServiceMonitorSpecApplyConfiguration{
-			Selector: &metav1.LabelSelectorApplyConfiguration{
+			Selector: &applyConfigMetav1.LabelSelectorApplyConfiguration{
 				MatchLabels: a.labelSelectors,
 			},
 			Endpoints: []monitoringv1.EndpointApplyConfiguration{

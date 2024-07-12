@@ -54,6 +54,12 @@ func RunCreateStack(ctx context.Context, logger *slog.Logger, clientSets *k8suti
 		logger.Error("error while creating NodeExporter", "error", err)
 		return err
 	}
+
+	if err := createKubeStateMetrics(ctx, clientSets, metav1.NamespaceDefault); err != nil {
+		logger.Error("error while creating KubeStateMetrics", "error", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -265,5 +271,47 @@ func createNodeExporter(ctx context.Context, clientSets *k8sutil.ClientSets, nam
 		return fmt.Errorf("error while creating PodMonitor: %v", err)
 	}
 
+	return nil
+}
+
+func createKubeStateMetrics(ctx context.Context, clientSets *k8sutil.ClientSets, namespace string) error {
+	manifests := builder.NewKubeStateMetricsBuilder(namespace, builder.LatestKubeStateMetricsVersion).
+		WithServiceAccount().
+		WithClusterRole().
+		WithClusterRoleBinding().
+		WithDeployment().
+		WithService().
+		WithServiceMonitor().
+		Build()
+
+	_, err := clientSets.KClient.CoreV1().ServiceAccounts(namespace).Apply(ctx, manifests.ServiceAccount, k8sutil.ApplyOption)
+	if err != nil {
+		return fmt.Errorf("error while creating ServiceAccount: %v", err)
+	}
+
+	_, err = clientSets.KClient.RbacV1().ClusterRoles().Apply(ctx, manifests.ClusterRole, k8sutil.ApplyOption)
+	if err != nil {
+		return fmt.Errorf("error while creating ClusterRole: %v", err)
+	}
+
+	_, err = clientSets.KClient.RbacV1().ClusterRoleBindings().Apply(ctx, manifests.ClusterRoleBinding, k8sutil.ApplyOption)
+	if err != nil {
+		return fmt.Errorf("error while creating ClusterRoleBinding: %v", err)
+	}
+
+	_, err = clientSets.KClient.AppsV1().Deployments(namespace).Apply(ctx, manifests.Deployment, k8sutil.ApplyOption)
+	if err != nil {
+		return fmt.Errorf("error while creating Deployment: %v", err)
+	}
+
+	_, err = clientSets.KClient.CoreV1().Services(namespace).Apply(ctx, manifests.Service, k8sutil.ApplyOption)
+	if err != nil {
+		return fmt.Errorf("error while creating Service: %v", err)
+	}
+
+	_, err = clientSets.MClient.MonitoringV1().ServiceMonitors(namespace).Apply(ctx, manifests.ServiceMonitor, k8sutil.ApplyOption)
+	if err != nil {
+		return fmt.Errorf("error while creating ServiceMonitor: %v", err)
+	}
 	return nil
 }
