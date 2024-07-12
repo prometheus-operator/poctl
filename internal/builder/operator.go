@@ -24,7 +24,6 @@ import (
 	applyCofongiAppsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
 	applyConfigCorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	applyConfigMetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
-	metav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	applyConfigRbacv1 "k8s.io/client-go/applyconfigurations/rbac/v1"
 	"k8s.io/utils/ptr"
 )
@@ -237,8 +236,8 @@ func (o *OperatorBuilder) WithDeployment() *OperatorBuilder {
 							},
 							Resources: &applyConfigCorev1.ResourceRequirementsApplyConfiguration{
 								Requests: &corev1.ResourceList{
-									"cpu":    resource.MustParse("100m"),
-									"memory": resource.MustParse("100Mi"),
+									"cpu":    resource.MustParse("200m"),
+									"memory": resource.MustParse("200Mi"),
 								},
 								Limits: &corev1.ResourceList{
 									"cpu":    resource.MustParse("200m"),
@@ -310,7 +309,7 @@ func (o *OperatorBuilder) WithServiceMonitor() *OperatorBuilder {
 			Namespace: ptr.To(o.namespace),
 		},
 		Spec: &monitoringv1.ServiceMonitorSpecApplyConfiguration{
-			Selector: &metav1.LabelSelectorApplyConfiguration{
+			Selector: &applyConfigMetav1.LabelSelectorApplyConfiguration{
 				MatchLabels: o.labelSelectors,
 			},
 			Endpoints: []monitoringv1.EndpointApplyConfiguration{
