@@ -49,6 +49,11 @@ func RunCreateStack(ctx context.Context, logger *slog.Logger, clientSets *k8suti
 		logger.Error("error while creating AlertManager", "error", err)
 		return err
 	}
+
+	if err := createNodeExporter(ctx, clientSets, metav1.NamespaceDefault); err != nil {
+		logger.Error("error while creating NodeExporter", "error", err)
+		return err
+	}
 	return nil
 }
 
@@ -233,6 +238,31 @@ func createAlertManager(
 	_, err = clientSets.MClient.MonitoringV1().ServiceMonitors(namespace).Apply(ctx, manifests.ServiceMonitor, k8sutil.ApplyOption)
 	if err != nil {
 		return fmt.Errorf("error while creating ServiceMonitor: %v", err)
+	}
+
+	return nil
+}
+
+func createNodeExporter(ctx context.Context, clientSets *k8sutil.ClientSets, namespace string) error {
+	manifests := builder.NewNodeExporterBuilder(namespace, builder.LatestNodeExporterVersion).
+		WithServiceAccount().
+		WithDaemonSet().
+		WithPodMonitor().
+		Build()
+
+	_, err := clientSets.KClient.CoreV1().ServiceAccounts(namespace).Apply(ctx, manifests.ServiceAccount, k8sutil.ApplyOption)
+	if err != nil {
+		return fmt.Errorf("error while creating ServiceAccount: %v", err)
+	}
+
+	_, err = clientSets.KClient.AppsV1().DaemonSets(namespace).Apply(ctx, manifests.DaemonSet, k8sutil.ApplyOption)
+	if err != nil {
+		return fmt.Errorf("error while creating DaemonSet: %v", err)
+	}
+
+	_, err = clientSets.MClient.MonitoringV1().PodMonitors(namespace).Apply(ctx, manifests.PodMonitor, k8sutil.ApplyOption)
+	if err != nil {
+		return fmt.Errorf("error while creating PodMonitor: %v", err)
 	}
 
 	return nil

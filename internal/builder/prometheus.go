@@ -29,7 +29,7 @@ type PrometheusBuilder struct {
 	labels         map[string]string
 	labelSelectors map[string]string
 	namespace      string
-	manifets       PrometheusManifests
+	manifests      PrometheusManifests
 }
 
 type PrometheusManifests struct {
@@ -54,7 +54,7 @@ func NewPrometheus(namespace string) *PrometheusBuilder {
 }
 
 func (p *PrometheusBuilder) WithServiceAccount() *PrometheusBuilder {
-	p.manifets.ServiceAccount = &applyConfigCorev1.ServiceAccountApplyConfiguration{
+	p.manifests.ServiceAccount = &applyConfigCorev1.ServiceAccountApplyConfiguration{
 		TypeMetaApplyConfiguration: applyConfigMetav1.TypeMetaApplyConfiguration{
 			Kind:       ptr.To("ServiceAccount"),
 			APIVersion: ptr.To("v1"),
@@ -69,7 +69,7 @@ func (p *PrometheusBuilder) WithServiceAccount() *PrometheusBuilder {
 }
 
 func (p *PrometheusBuilder) WithClusterRole() *PrometheusBuilder {
-	p.manifets.ClusterRole = &applyConfigRbacv1.ClusterRoleApplyConfiguration{
+	p.manifests.ClusterRole = &applyConfigRbacv1.ClusterRoleApplyConfiguration{
 		TypeMetaApplyConfiguration: applyConfigMetav1.TypeMetaApplyConfiguration{
 			Kind:       ptr.To("ClusterRole"),
 			APIVersion: ptr.To("rbac.authorization.k8s.io/v1"),
@@ -105,7 +105,7 @@ func (p *PrometheusBuilder) WithClusterRole() *PrometheusBuilder {
 }
 
 func (p *PrometheusBuilder) WithClusterRoleBinding() *PrometheusBuilder {
-	p.manifets.ClusterRoleBinding = &applyConfigRbacv1.ClusterRoleBindingApplyConfiguration{
+	p.manifests.ClusterRoleBinding = &applyConfigRbacv1.ClusterRoleBindingApplyConfiguration{
 		TypeMetaApplyConfiguration: applyConfigMetav1.TypeMetaApplyConfiguration{
 			Kind:       ptr.To("ClusterRoleBinding"),
 			APIVersion: ptr.To("rbac.authorization.k8s.io/v1"),
@@ -118,12 +118,12 @@ func (p *PrometheusBuilder) WithClusterRoleBinding() *PrometheusBuilder {
 		RoleRef: &applyConfigRbacv1.RoleRefApplyConfiguration{
 			APIGroup: ptr.To("rbac.authorization.k8s.io"),
 			Kind:     ptr.To("ClusterRole"),
-			Name:     p.manifets.ClusterRole.Name,
+			Name:     p.manifests.ClusterRole.Name,
 		},
 		Subjects: []applyConfigRbacv1.SubjectApplyConfiguration{
 			{
 				Kind:      ptr.To("ServiceAccount"),
-				Name:      p.manifets.ServiceAccount.Name,
+				Name:      p.manifests.ServiceAccount.Name,
 				Namespace: ptr.To(p.namespace),
 			},
 		},
@@ -132,7 +132,7 @@ func (p *PrometheusBuilder) WithClusterRoleBinding() *PrometheusBuilder {
 }
 
 func (p *PrometheusBuilder) WithPrometheus() *PrometheusBuilder {
-	p.manifets.Prometheus = &monitoringv1.PrometheusApplyConfiguration{
+	p.manifests.Prometheus = &monitoringv1.PrometheusApplyConfiguration{
 		TypeMetaApplyConfiguration: applyConfigMetav1.TypeMetaApplyConfiguration{
 			Kind:       ptr.To("Prometheus"),
 			APIVersion: ptr.To("monitoring.coreos.com/v1"),
@@ -144,7 +144,7 @@ func (p *PrometheusBuilder) WithPrometheus() *PrometheusBuilder {
 		},
 		Spec: &monitoringv1.PrometheusSpecApplyConfiguration{
 			CommonPrometheusFieldsApplyConfiguration: monitoringv1.CommonPrometheusFieldsApplyConfiguration{
-				ServiceAccountName:              p.manifets.ServiceAccount.Name,
+				ServiceAccountName:              p.manifests.ServiceAccount.Name,
 				ServiceMonitorSelector:          &metav1.LabelSelectorApplyConfiguration{},
 				ServiceMonitorNamespaceSelector: &metav1.LabelSelectorApplyConfiguration{},
 				PodMonitorSelector:              &metav1.LabelSelectorApplyConfiguration{},
@@ -173,7 +173,7 @@ func (p *PrometheusBuilder) WithPrometheus() *PrometheusBuilder {
 }
 
 func (p *PrometheusBuilder) WithService() *PrometheusBuilder {
-	p.manifets.Service = &applyConfigCorev1.ServiceApplyConfiguration{
+	p.manifests.Service = &applyConfigCorev1.ServiceApplyConfiguration{
 		TypeMetaApplyConfiguration: applyConfigMetav1.TypeMetaApplyConfiguration{
 			Kind:       ptr.To("Service"),
 			APIVersion: ptr.To("v1"),
@@ -198,7 +198,7 @@ func (p *PrometheusBuilder) WithService() *PrometheusBuilder {
 }
 
 func (p *PrometheusBuilder) WithServiceMonitor() *PrometheusBuilder {
-	p.manifets.ServiceMonitor = &monitoringv1.ServiceMonitorApplyConfiguration{
+	p.manifests.ServiceMonitor = &monitoringv1.ServiceMonitorApplyConfiguration{
 		TypeMetaApplyConfiguration: applyConfigMetav1.TypeMetaApplyConfiguration{
 			Kind:       ptr.To("ServiceMonitor"),
 			APIVersion: ptr.To("monitoring.coreos.com/v1"),
@@ -224,5 +224,5 @@ func (p *PrometheusBuilder) WithServiceMonitor() *PrometheusBuilder {
 }
 
 func (p *PrometheusBuilder) Build() PrometheusManifests {
-	return p.manifets
+	return p.manifests
 }
