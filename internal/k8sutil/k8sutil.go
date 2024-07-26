@@ -28,6 +28,7 @@ import (
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	apiv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiExtensions "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -103,9 +104,10 @@ func CrdDeserilezer(logger *slog.Logger, reader io.ReadCloser) (runtime.Object, 
 }
 
 type ClientSets struct {
-	KClient kubernetes.Interface
-	MClient monitoringclient.Interface
-	DClient dynamic.Interface
+	KClient             kubernetes.Interface
+	MClient             monitoringclient.Interface
+	DClient             dynamic.Interface
+	APIExtensionsClient apiExtensions.Interface
 }
 
 func GetClientSets(kubeconfig string) (*ClientSets, error) {
@@ -130,9 +132,15 @@ func GetClientSets(kubeconfig string) (*ClientSets, error) {
 		return nil, fmt.Errorf("error while creating dynamic client: %v", err)
 	}
 
+	apiExtensions, err := apiExtensions.NewForConfig(restConfig)
+	if err != nil {
+		return nil, fmt.Errorf("error while creating apiextensions client: %v", err)
+	}
+
 	return &ClientSets{
-		KClient: kclient,
-		MClient: mclient,
-		DClient: kdynamicClient,
+		KClient:             kclient,
+		MClient:             mclient,
+		DClient:             kdynamicClient,
+		APIExtensionsClient: apiExtensions,
 	}, nil
 }
