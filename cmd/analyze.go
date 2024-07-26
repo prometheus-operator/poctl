@@ -27,6 +27,7 @@ type AnalyzeKind string
 
 const (
 	ServiceMonitor AnalyzeKind = "servicemonitor"
+	Operator       AnalyzeKind = "operator"
 )
 
 type AnalyzeFlags struct {
@@ -68,6 +69,8 @@ func run(cmd *cobra.Command, _ []string) error {
 	switch AnalyzeKind(strings.ToLower(analyzerFlags.Kind)) {
 	case ServiceMonitor:
 		return analyzers.RunServiceMonitorAnalyzer(cmd.Context(), clientSets, analyzerFlags.Name, analyzerFlags.Namespace)
+	case Operator:
+		return analyzers.RunOperatorAnalyzer(cmd.Context(), clientSets, analyzerFlags.Name, analyzerFlags.Namespace)
 	default:
 		return fmt.Errorf("kind %s not supported", analyzerFlags.Kind)
 	}
