@@ -3,21 +3,8 @@ on:
   pull_request:
   push:
     branches:
-      - 'main'
+      - "main"
 jobs:
-  format:
-    runs-on: ubuntu-latest
-    name: Check Documentation formatting and links
-    steps:
-    - uses: actions/checkout@v4
-    - name: Import environment variables from file
-      run: cat ".github/env" >> $GITHUB_ENV
-    - uses: actions/setup-go@v5
-      with:
-        go-version: '${{ env.golang-version }}'
-        check-latest: true
-    - run: make check-docs check-license
-
   check-golang:
     runs-on: ubuntu-latest
     name: Golang linter
@@ -27,7 +14,7 @@ jobs:
         run: cat ".github/env" >> $GITHUB_ENV
       - uses: actions/setup-go@v5
         with:
-          go-version: '${{ env.golang-version }}'
+          go-version: "${{ env.golang-version }}"
           check-latest: true
       - name: go.mod
         run: make tidy && git diff --exit-code
@@ -36,6 +23,20 @@ jobs:
         with:
           version: v1.57.2
           args: --timeout 10m0s --go ${{ env.golang-version }}
+  format:
+    runs-on: ubuntu-latest
+    name: Check Documentation formatting and links
+    steps:
+      - uses: actions/checkout@v4
+      - name: Import environment variables from file
+        run: cat ".github/env" >> $GITHUB_ENV
+      - name: go.mod
+        run: make tidy
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "${{ env.golang-version }}"
+          check-latest: true
+      - run: make check-docs check-license
 
   build:
     runs-on: ${{ matrix.os }}
@@ -46,11 +47,11 @@ jobs:
           - ubuntu-latest
     name: Build operator binary
     steps:
-    - uses: actions/checkout@v4
-    - name: Import environment variables from file
-      run: cat ".github/env" >> $GITHUB_ENV
-    - uses: actions/setup-go@v5
-      with:
-        go-version: '${{ env.golang-version }}'
-        check-latest: true
-    - run: make poctl
+      - uses: actions/checkout@v4
+      - name: Import environment variables from file
+        run: cat ".github/env" >> $GITHUB_ENV
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "${{ env.golang-version }}"
+          check-latest: true
+      - run: make poctl
