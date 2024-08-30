@@ -14,7 +14,7 @@ MDOX_VALIDATE_CONFIG?=.mdox.validate.yaml
 
 TOOLING=$(MDOX_BINARY) $(GOLANGCILINTER_BINARY)
 
-MD_FILES_TO_FORMAT=$(shell ls *.md)
+MD_FILES_TO_FORMAT=$(shell ls *.md) $(shell find Documentation -name "*.md")
 
 .PHONY: docs
 docs: $(MDOX_BINARY)
