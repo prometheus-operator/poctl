@@ -17,6 +17,7 @@ package analyzers
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/prometheus-operator/poctl/internal/k8sutil"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -74,6 +75,7 @@ func RunServiceMonitorAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSe
 		}
 	}
 
+	slog.Info("ServiceMonitor is compliant, no issues found", "name", name, "namespace", namespace)
 	return nil
 }
 

@@ -16,10 +16,12 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/prometheus-operator/poctl/internal/analyzers"
 	"github.com/prometheus-operator/poctl/internal/k8sutil"
+	"github.com/prometheus-operator/poctl/internal/log"
 	"github.com/spf13/cobra"
 )
 
@@ -60,6 +62,13 @@ func run(cmd *cobra.Command, _ []string) error {
 	if analyzerFlags.Namespace == "" {
 		return fmt.Errorf("namespace is required")
 	}
+
+	logger, err := log.NewLogger()
+	if err != nil {
+		return fmt.Errorf("error while creating logger: %v", err)
+	}
+
+	slog.SetDefault(logger)
 
 	clientSets, err := k8sutil.GetClientSets(kubeconfig)
 	if err != nil {
