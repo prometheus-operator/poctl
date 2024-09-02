@@ -5,7 +5,7 @@ The create stack command is used to deploy a monitoring stack to a Kubernetes cl
 - [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator)
 - [Prometheus](https://github.com/prometheus/prometheus)
 - [Kube-State-Metrics](https://github.com/kubernetes/kube-state-metrics)
-- [NodeExporter](https://github.com/prometheus/node_exporter)
+- [Node exporter](https://github.com/prometheus/node_exporter)
 - [Alertmanager](https://github.com/prometheus/alertmanager)
 
 It installs all the required Custom Resource Definitions using the latest available version of the Prometheus Operator.
