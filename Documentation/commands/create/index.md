@@ -10,7 +10,7 @@ The create stack command is used to deploy a monitoring stack to a Kubernetes cl
 
 It installs all the required Custom Resource Definitions using the latest available version of the Prometheus Operator.
 
-```bash mdox-exec="go run main.go create stack --help" mdox-expect-exit-code=2
+```bash mdox-exec="go run main.go create stack --help" mdox-expect-exit-code=0
 create a stack of Prometheus Operator resources.
 
 Usage:
@@ -30,7 +30,7 @@ Global Flags:
 
 The create service monitor command is used to create a ServiceMonitor object in a Kubernetes cluster, targeting an existing Kubernetes Service, users can provide the namespace, service name, and port of the service to create the ServiceMonitor object.
 
-```bash mdox-exec="go run main.go create servicemonitor --help" mdox-expect-exit-code=2
+```bash mdox-exec="go run main.go create servicemonitor --help" mdox-expect-exit-code=0
 Create a service monitor object based on user input parameters or taking as source of truth a kubernetes service
 
 Usage:
