@@ -21,7 +21,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6.0.1
         with:
-          version: v1.57.2
+          version: v1.60.3
           args: --timeout 10m0s --go ${{ env.golang-version }}
   format:
     runs-on: ubuntu-latest
