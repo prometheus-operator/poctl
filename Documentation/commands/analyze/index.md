@@ -41,3 +41,21 @@ The ServiceMonitor object must have a defined selector that selects at least one
 ### Port Matching
 
 Each endpoint within the ServiceMonitor object must have a defined port, and this port should match the port of the service it monitors.
+
+## Analyze Operator
+
+The analyze command can also target the Prometheus Operator deployment within a Kubernetes cluster. Users can specify the namespace and name of the Prometheus Operator to assess its compliance with the predefined rules.
+
+## Rules
+
+The analyze command evaluates objects against a set of rules to determine compliance. These rules are defined in the `analyzer` package and are specifically implemented in the `internal/analyzer/operator.go` file.
+
+### Operator Existence
+
+The Prometheus Operator must be deployed in the Kubernetes cluster, which can be confirmed by checking for the presence of the prometheus-operator deployment in the specified namespace and under the given name.
+
+### RBAC Rules
+
+The Prometheus Operator deployment requires proper RBAC (Role-Based Access Control) rules to function correctly. This means the service account associated with the Prometheus Operator must have permissions aligned with the Prometheus Operator CRDs (Custom Resource Definitions) present in the cluster.
+
+For instance, if the Prometheus Operator is managing only Prometheus instances, the service account should have the necessary permissions to create, update, and delete Prometheus resources, but it should not have permissions to manage other resources like Alertmanager.
