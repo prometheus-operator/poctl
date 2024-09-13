@@ -57,7 +57,7 @@ Global Flags:
       --kubeconfig string   path to the kubeconfig file, defaults to $KUBECONFIG
       --log-format string   Log format (default "text")
       --log-level string    Log level (default "DEBUG")
-      --version string      Prometheus Operator version (default "0.74.0")
+      --version string      Prometheus Operator version (default "0.76.0")
 ```
 
 #### Service Monitor
@@ -80,7 +80,7 @@ Global Flags:
       --kubeconfig string   path to the kubeconfig file, defaults to $KUBECONFIG
       --log-format string   Log format (default "text")
       --log-level string    Log level (default "DEBUG")
-      --version string      Prometheus Operator version (default "0.74.0")
+      --version string      Prometheus Operator version (default "0.76.0")
 ```
 
 ### Analyze
