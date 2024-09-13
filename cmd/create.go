@@ -27,7 +27,7 @@ var createCmd = &cobra.Command{
 	// Run: func(cmd *cobra.Command, args []string) { },
 }
 
-const LatestVersion = "0.74.0"
+const LatestVersion = "0.76.0"
 
 func init() {
 	rootCmd.AddCommand(createCmd)
