@@ -21,9 +21,8 @@ import (
 // createCmd represents the create command.
 var createCmd = &cobra.Command{
 	Use:   "create",
-	Short: "create is used to create Prometheus Operator resources.",
-	Long: `create is used to create Prometheus Operator resources, 
-	such as Prometheus instances, ServiceMonitors, and more.`,
+	Short: "The create command generates Prometheus Operator resources like Prometheus, Alertmanager, and ServiceMonitor, simplifying the setup of monitoring configurations in Kubernetes.",
+	Long:  `The create command in poctl streamlines the process of creating Prometheus Operator resources in Kubernetes. It allows users to easily generate configurations for key components such as Prometheus, Alertmanager, and ServiceMonitor. This tool reduces the complexity of manual configuration by automating resource creation, ensuring proper setups while saving time. Ideal for both new deployments and updates, the create command helps administrators efficiently establish or modify their monitoring infrastructure.`,
 	// Run: func(cmd *cobra.Command, args []string) { },
 }
 

@@ -42,11 +42,9 @@ var (
 	analyzerFlags = AnalyzeFlags{}
 	analyzeCmd    = &cobra.Command{
 		Use:   "analyze",
-		Short: "Analyzes the given object and runs a set of rules on it to determine if it is compliant with the given rules.",
-		Long: `Analyzes the given object and runs a set of rules on it to determine if it is compliant with the given rules.
-		For example:
-			- Analyze if the service monitor is selecting any service or using the correct service port.`,
-		RunE: run,
+		Short: "The analyze command performs an in-depth analysis of Prometheus Operator resources, identifying potential issues and misconfigurations in your monitoring setup. It helps ensure your resources are optimized and error-free.",
+		Long:  `The analyze command in poctl is a powerful tool that assesses the health of Prometheus Operator resources in Kubernetes. It detects misconfigurations, issues, and inefficiencies in Prometheus, Alertmanager, and ServiceMonitor resources. By offering actionable insights and recommendations, it helps administrators quickly resolve problems and optimize their monitoring setup for better performance.`,
+		RunE:  run,
 	}
 )
 
