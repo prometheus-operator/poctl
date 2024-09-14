@@ -3,9 +3,7 @@
 The analyze command is used to examine Prometheus Operator objects to ensure they comply with specific rules. It checks whether the objects meet certain predefined conditions.
 
 ```bash mdox-exec="go run main.go analyze --help" mdox-expect-exit-code=0
-Analyzes the given object and runs a set of rules on it to determine if it is compliant with the given rules.
-		For example:
-			- Analyze if the service monitor is selecting any service or using the correct service port.
+The analyze command in poctl is a powerful tool that assesses the health of Prometheus Operator resources in Kubernetes. It detects misconfigurations, issues, and inefficiencies in Prometheus, Alertmanager, and ServiceMonitor resources. By offering actionable insights and recommendations, it helps administrators quickly resolve problems and optimize their monitoring setup for better performance.
 
 Usage:
   poctl analyze [flags]

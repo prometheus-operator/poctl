@@ -24,9 +24,10 @@ import (
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "poctl",
-	Short: "poctl is a command line interface for managing Prometheus Operator.",
-	Long: `poctl is a command line interface for managing Prometheus Operator, allowing you to
-	create, delete, and manage Prometheus instances, ServiceMonitors, and more.`,
+	Short: "Command Line Interface (CLI) designed specifically for managing Prometheus Operator resources. It streamlines the processes of deploying, troubleshooting, and validating your monitoring infrastructure within Kubernetes environments.",
+	Long: `Command Line Interface (CLI) designed specifically for managing Prometheus Operator resources. It streamlines the processes of deploying, troubleshooting, and validating your monitoring infrastructure within Kubernetes environments.
+
+By providing an intuitive interface, poctl allows users to efficiently manage key resources like Prometheus instances, Alertmanager configurations, and ServiceMonitors. It simplifies complex tasks, reduces manual configuration errors, and offers built-in tools for validation and troubleshooting, helping you maintain a healthy and scalable monitoring setup.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
