@@ -16,6 +16,10 @@ go install github.com/prometheus-operator/poctl
 
 This project is currently in active development and fully experimental, so expect breaking changes and rough edges. We encourage you to try it out and provide feedback.
 
+## Documentation
+
+For detailed information on available commands and their usage, refer to the [Commands](Documentation/commands) documentation.
+
 ## Contributing
 
 See [CONTRIBUTING](https://github.com/prometheus-operator/prometheus-operator/blob/main/CONTRIBUTING.md).
