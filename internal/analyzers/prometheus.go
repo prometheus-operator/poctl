@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+
 	"github.com/prometheus-operator/poctl/internal/k8sutil"
 	v1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -58,10 +59,10 @@ func RunPrometheusAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets, 
 	}
 
 	namespaceSelectors := map[string]interface{}{
-		"PodMonitorNamespaceSelector":      prometheus.Spec.PodMonitorNamespaceSelector,
-		"ServiceMonitorNamespaceSelector":  prometheus.Spec.ServiceMonitorNamespaceSelector,
-		"ScrapeConfigNamespaceSelector":    prometheus.Spec.ScrapeConfigNamespaceSelector,
-		"ProbeNamespaceSelector":           prometheus.Spec.ProbeNamespaceSelector,
+		"PodMonitorNamespaceSelector":     prometheus.Spec.PodMonitorNamespaceSelector,
+		"ServiceMonitorNamespaceSelector": prometheus.Spec.ServiceMonitorNamespaceSelector,
+		"ScrapeConfigNamespaceSelector":   prometheus.Spec.ScrapeConfigNamespaceSelector,
+		"ProbeNamespaceSelector":          prometheus.Spec.ProbeNamespaceSelector,
 	}
 
 	namespaceSelectorStatus, nilNamespaceSelectors := checkPrometheusNamespaceSelectorsStatus(namespaceSelectors)
@@ -69,33 +70,37 @@ func RunPrometheusAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets, 
 	if !namespaceSelectorStatus {
 		if len(nilNamespaceSelectors) > 0 {
 			//fmt.Printf("No %s is defined, defaulting to the same namespace of Prometheus\n", strings.Join(nilNamespaceSelectors, ", "))
-			checkSelectorsCreated := checkServiceDiscovery(ctx,clientSets,namespace)
-			if !checkSelectorsCreated{
+			checkSelectorsCreated, selectorLists := checkServiceDiscovery(ctx, clientSets, namespace)
+			if !checkSelectorsCreated {
 				fmt.Printf("No Service Selectors are created yet")
 			}
+			if len(nilNamespaceSelectors) == len(selectorLists) {
+				fmt.Println("All namespace selectors are either empty or properly defined.")
+			}
 		}
-	} else {
-			fmt.Println("All namespace selectors are either empty or properly defined.")
 	}
 
 	serviceSelectors := map[string]interface{}{
-		"ServiceMonitorSelector":      prometheus.Spec.ServiceMonitorSelector,
-		"PodMonitorSelector":          prometheus.Spec.PodMonitorSelector,
-		"ProbeSelector":               prometheus.Spec.ProbeSelector,
-		"ScrapeConfigSelector":        prometheus.Spec.ScrapeConfigSelector,
+		"ServiceMonitorSelector": prometheus.Spec.ServiceMonitorSelector,
+		"PodMonitorSelector":     prometheus.Spec.PodMonitorSelector,
+		"ProbeSelector":          prometheus.Spec.ProbeSelector,
+		"ScrapeConfigSelector":   prometheus.Spec.ScrapeConfigSelector,
 	}
 
 	serviceSelectorStatus, emptyServiceSelectors := checkPrometheusServiceSelectorsStatus(serviceSelectors)
 
-	if !serviceSelectorStatus{
-		if emptyServiceSelectors!= nil {
+	if !serviceSelectorStatus {
+		if emptyServiceSelectors != nil {
 			//fmt.Printf("Selectors are defined: %s\n", strings.Join(emptyServiceSelectors, ", "))
-			checkServiceSelectorsCreated := checkServiceDiscovery(ctx,clientSets,namespace)
-			if !checkServiceSelectorsCreated{
+			checkServiceSelectorsCreated, svcselectorsLists := checkServiceDiscovery(ctx, clientSets, namespace)
+			if !checkServiceSelectorsCreated {
 				fmt.Printf("No Service Selectors are created yet")
 			}
+			if len(emptyServiceSelectors) == len(svcselectorsLists) {
+				fmt.Println("Prometheus matches all objects.")
+			}
 		}
-	} 
+	}
 
 	slog.Info("Prometheus is compliant, no issues found", "name", name, "namespace", namespace)
 	return nil
@@ -175,77 +180,77 @@ func doesServiceAccountBoundToRoleBindingList(clusterRoleBindings *v1.ClusterRol
 }
 
 func checkPrometheusNamespaceSelectorsStatus(namespaceSelectors map[string]interface{}) (bool, []string) {
-    var nilNamespaceSelectors []string
-    var emptyNamespaceSelectors []string
+	var nilNamespaceSelectors []string
+	var emptyNamespaceSelectors []string
 
-    for selectorName, selector := range namespaceSelectors {
-        if selector == nil {
-            nilNamespaceSelectors = append(nilNamespaceSelectors, selectorName)
-        } else {
-            selectorStruct, ok := selector.(*metav1.LabelSelector)
-            if ok {
-                if len(selectorStruct.MatchLabels) == 0 && len(selectorStruct.MatchExpressions) == 0 {
-                    emptyNamespaceSelectors = append(emptyNamespaceSelectors, selectorName)
-                } else {
-                    if len(selectorStruct.MatchLabels) > 0 {
+	for selectorName, selector := range namespaceSelectors {
+		if selector == nil {
+			nilNamespaceSelectors = append(nilNamespaceSelectors, selectorName)
+		} else {
+			selectorStruct, ok := selector.(*metav1.LabelSelector)
+			if ok {
+				if len(selectorStruct.MatchLabels) == 0 && len(selectorStruct.MatchExpressions) == 0 {
+					emptyNamespaceSelectors = append(emptyNamespaceSelectors, selectorName)
+				} else {
+					if len(selectorStruct.MatchLabels) > 0 {
 						for labelKey, labelValue := range selectorStruct.MatchLabels {
 							fmt.Printf("%s has MatchLabel: %s=%s", selectorName, labelKey, labelValue)
 						}
-                    }
+					}
 					if len(selectorStruct.MatchExpressions) > 0 {
 						for _, expression := range selectorStruct.MatchExpressions {
 							fmt.Printf("%s has MatchExpression: %s %s %v", selectorName, expression.Key, expression.Operator, expression.Values)
 						}
 					}
-                }
-            }
-        }
-    }
+				}
+			}
+		}
+	}
 
-    if len(emptyNamespaceSelectors) == 4 {
-		//fmt.Printf("%s is empty, Prometheus is watching all namespaces.\n", strings.Join(emptyNamespaceSelectors, ", "))
-        return true, nil
-    }
+	if len(emptyNamespaceSelectors) == 4 {
+		fmt.Printf("%s is empty, Prometheus is watching all namespaces.\n", strings.Join(emptyNamespaceSelectors, ", "))
+		return true, nil
+	}
 
-    if len(nilNamespaceSelectors) > 0 {
-		return false, nilNamespaceSelectors 
-    }
-    return true, nil
+	if len(nilNamespaceSelectors) > 0 {
+		return false, nilNamespaceSelectors
+	}
+	return false, nil
 }
 
 func checkPrometheusServiceSelectorsStatus(serviceSelectors map[string]interface{}) (bool, []string) {
 	var nilServiceSelectors []string
 	var emptyServiceSelectors []string
 
-    for selectorName, selector := range serviceSelectors {
-        if selector == nil {
-            nilServiceSelectors = append(nilServiceSelectors, selectorName)
-        } else {
-            selectorStruct, ok := selector.(*metav1.LabelSelector)
-            if ok {
-                if len(selectorStruct.MatchLabels) == 0 && len(selectorStruct.MatchExpressions) == 0 {
-                    emptyServiceSelectors = append(emptyServiceSelectors, selectorName)
-                } else {
-                    if len(selectorStruct.MatchLabels) > 0 {
+	for selectorName, selector := range serviceSelectors {
+		if selector == nil {
+			nilServiceSelectors = append(nilServiceSelectors, selectorName)
+		} else {
+			selectorStruct, ok := selector.(*metav1.LabelSelector)
+			if ok {
+				if len(selectorStruct.MatchLabels) == 0 && len(selectorStruct.MatchExpressions) == 0 {
+					emptyServiceSelectors = append(emptyServiceSelectors, selectorName)
+				} else {
+					if len(selectorStruct.MatchLabels) > 0 {
 						for labelKey, labelValue := range selectorStruct.MatchLabels {
 							fmt.Printf("%s has MatchLabel: %s=%s", selectorName, labelKey, labelValue)
 						}
-                    }
+					}
 					if len(selectorStruct.MatchExpressions) > 0 {
 						for _, expression := range selectorStruct.MatchExpressions {
 							fmt.Printf("%s has MatchExpression: %s %s %v", selectorName, expression.Key, expression.Operator, expression.Values)
 						}
 					}
-                }
-            }
-        }
-    }
+				}
+			}
+		}
+	}
 
 	if len(nilServiceSelectors) == 4 {
 		fmt.Printf("No %s are defined, the Prometheus matches no objects,configuration is unmanaged\n", strings.Join(nilServiceSelectors, ", "))
 		return false, nil
 	}
-	
+
 	if len(emptyServiceSelectors) > 0 {
 		//fmt.Printf("%s are empty, Prometheus matches all objects.\n", strings.Join(emptyServiceSelectors, ", "))
 		return true, emptyServiceSelectors
@@ -253,30 +258,30 @@ func checkPrometheusServiceSelectorsStatus(serviceSelectors map[string]interface
 	return true, nil
 }
 
-func checkServiceDiscovery(ctx context.Context, clientSets *k8sutil.ClientSets, namespace string) bool {
+func checkServiceDiscovery(ctx context.Context, clientSets *k8sutil.ClientSets, namespace string) (bool, []string) {
 	var existingSelectors []string
 	podMonitor, err := clientSets.MClient.MonitoringV1().PodMonitors(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		fmt.Printf("Error listing PodMonitors: %v\n", err)
 	}
 	if len(podMonitor.Items) == 0 {
-		existingSelectors = append(existingSelectors,"podMonitor")
-	}	
+		existingSelectors = append(existingSelectors, "podMonitor")
+	}
 
 	serviceMonitor, err := clientSets.MClient.MonitoringV1().ServiceMonitors(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		fmt.Printf("Error listing serviceMonitor: %v\n", err)
 	}
 	if len(serviceMonitor.Items) == 0 {
-		existingSelectors = append(existingSelectors,"serviceMonitor")
+		existingSelectors = append(existingSelectors, "serviceMonitor")
 	}
-	
+
 	probe, err := clientSets.MClient.MonitoringV1().Probes(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		fmt.Printf("Error listing Probes: %v\n", err)
 	}
 	if len(probe.Items) == 0 {
-		existingSelectors = append(existingSelectors,"probe")
+		existingSelectors = append(existingSelectors, "probe")
 	}
 
 	scrapeConfig, err := clientSets.MClient.MonitoringV1alpha1().ScrapeConfigs(namespace).List(ctx, metav1.ListOptions{})
@@ -284,11 +289,14 @@ func checkServiceDiscovery(ctx context.Context, clientSets *k8sutil.ClientSets, 
 		fmt.Printf("Error listing scrapeConfig: %v\n", err)
 	}
 	if len(scrapeConfig.Items) == 0 {
-		existingSelectors = append(existingSelectors,"probe")
+		existingSelectors = append(existingSelectors, "scrapeConfig")
 	}
 
 	if len(existingSelectors) == 0 {
-		return false
+		return false, nil
 	}
-	return true
+	if len(existingSelectors) > 0 {
+		return true, existingSelectors
+	}
+	return true, nil
 }
