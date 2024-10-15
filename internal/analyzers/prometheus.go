@@ -257,7 +257,7 @@ func checkServiceDiscovery(ctx context.Context, clientSets *k8sutil.ClientSets, 
 	var existingSelectors []string
 	podMonitor, err := clientSets.MClient.MonitoringV1().PodMonitors(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		fmt.Errorf("Error listing PodMonitors: %v\n", err)
+		fmt.Printf("Error listing PodMonitors: %v\n", err)
 	}
 	if len(podMonitor.Items) == 0 {
 		existingSelectors = append(existingSelectors,"podMonitor")
@@ -265,7 +265,7 @@ func checkServiceDiscovery(ctx context.Context, clientSets *k8sutil.ClientSets, 
 
 	serviceMonitor, err := clientSets.MClient.MonitoringV1().ServiceMonitors(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		fmt.Errorf("Error listing serviceMonitor: %v\n", err)
+		fmt.Printf("Error listing serviceMonitor: %v\n", err)
 	}
 	if len(serviceMonitor.Items) == 0 {
 		existingSelectors = append(existingSelectors,"serviceMonitor")
@@ -273,7 +273,7 @@ func checkServiceDiscovery(ctx context.Context, clientSets *k8sutil.ClientSets, 
 	
 	probe, err := clientSets.MClient.MonitoringV1().Probes(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		fmt.Errorf("Error listing Probes: %v\n", err)
+		fmt.Printf("Error listing Probes: %v\n", err)
 	}
 	if len(probe.Items) == 0 {
 		existingSelectors = append(existingSelectors,"probe")
@@ -281,7 +281,7 @@ func checkServiceDiscovery(ctx context.Context, clientSets *k8sutil.ClientSets, 
 
 	scrapeConfig, err := clientSets.MClient.MonitoringV1alpha1().ScrapeConfigs(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		fmt.Errorf("Error listing scrapeConfig: %v\n", err)
+		fmt.Printf("Error listing scrapeConfig: %v\n", err)
 	}
 	if len(scrapeConfig.Items) == 0 {
 		existingSelectors = append(existingSelectors,"probe")
