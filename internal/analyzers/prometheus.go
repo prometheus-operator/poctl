@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/prometheus-operator/poctl/internal/k8sutil"
+	"github.com/prometheus-operator/poctl/internal/rbachelpers"
 	v1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,8 +42,10 @@ func RunPrometheusAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets, 
 	if err != nil {
 		return fmt.Errorf("failed to list RoleBindings: %w", err)
 	}
+	
+	rbacHelper := &rbachelpers.RBACHelper{}
 
-	if !doesServiceAccountBoundToRoleBindingList(cRb, prometheus.Spec.ServiceAccountName) {
+	if !rbacHelper.IsServiceAccountBoundToRoleBindingList(cRb, prometheus.Spec.ServiceAccountName) {
 		return fmt.Errorf("ServiceAccount %s is not bound to any RoleBindings", prometheus.Spec.ServiceAccountName)
 	}
 
@@ -161,19 +164,6 @@ func containsVerb(ruleVerbs, verbsToCheck []string) bool {
 	for _, v := range verbsToCheck {
 		if verbSet[v] {
 			return true
-		}
-	}
-	return false
-}
-
-func doesServiceAccountBoundToRoleBindingList(clusterRoleBindings *v1.ClusterRoleBindingList, serviceAccountName string) bool {
-	for _, roleBinding := range clusterRoleBindings.Items {
-		if roleBinding.Subjects != nil {
-			for _, subject := range roleBinding.Subjects {
-				if subject.Kind == "ServiceAccount" && subject.Name == serviceAccountName {
-					return true
-				}
-			}
 		}
 	}
 	return false
