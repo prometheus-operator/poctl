@@ -30,6 +30,29 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
+func getPrometheusClusterRoleBinding(namespace string) []rbacv1.ClusterRoleBinding {
+	return []rbacv1.ClusterRoleBinding{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "prometheus",
+				Labels: map[string]string{
+					"prometheus": "prometheus",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				Name: "prometheus",
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      "prometheus",
+					Namespace: namespace,
+				},
+			},
+		},
+	}
+}
+
 func TestPrometheusAnalyzer(t *testing.T) {
 	type testCase struct {
 		name                string
@@ -39,6 +62,32 @@ func TestPrometheusAnalyzer(t *testing.T) {
 	}
 
 	tests := []testCase{
+		{
+			name:      "PrometheusRoleBindingListError",
+			namespace: "test",
+			shouldFail: true,
+			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
+				mClient := monitoringclient.NewSimpleClientset(&monitoringv1.PrometheusList{})
+				mClient.PrependReactor("get", "prometheuses", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &monitoringv1.Prometheus{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      tc.name,
+							Namespace: tc.namespace,
+						},
+					}, nil
+				})
+
+				kClient := fake.NewSimpleClientset(&rbacv1.ClusterRoleBindingList{})
+				kClient.PrependReactor("list", "clusterrolebindings", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, nil, errors.NewInternalError(nil)
+				})
+
+				return k8sutil.ClientSets{
+					MClient: mClient,
+					KClient: kClient,
+				}
+			},
+		},
 		{
 			name:      "PrometheusServiceAccountNotFound",
 			namespace: "test",
@@ -56,7 +105,136 @@ func TestPrometheusAnalyzer(t *testing.T) {
 
 				kClient := fake.NewSimpleClientset(&rbacv1.ClusterRoleBindingList{})
 				kClient.PrependReactor("list", "clusterrolebindings", func(_ clienttesting.Action) (bool, runtime.Object, error) {
-					return true, nil, errors.NewInternalError(nil)
+					return true, &rbacv1.ClusterRoleBindingList{
+						Items: getPrometheusClusterRoleBinding(tc.namespace),
+					}, nil
+				})
+
+				return k8sutil.ClientSets{
+					MClient: mClient,
+					KClient: kClient,
+				}
+			},
+		},
+		{
+			name:      "ConfigMapsNotFoundInClusterRole",
+			namespace: "test",
+			shouldFail: true,
+			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
+				mClient := monitoringclient.NewSimpleClientset(&monitoringv1.PrometheusList{})
+				mClient.PrependReactor("get", "prometheuses", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &monitoringv1.Prometheus{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      tc.name,
+							Namespace: tc.namespace,
+						},
+					}, nil
+				})
+
+				kClient := fake.NewSimpleClientset(&rbacv1.ClusterRoleBindingList{})
+				kClient.PrependReactor("list", "clusterrolebindings", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &rbacv1.ClusterRoleBindingList{
+						Items: getPrometheusClusterRoleBinding(tc.namespace),
+					}, nil
+				})
+
+				kClient.PrependReactor("get", "clusterroles", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &rbacv1.ClusterRole{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "prometheus",
+						},
+						Rules: []rbacv1.PolicyRule{
+							{
+								Resources: []string{"configmaps"},
+								Verbs:     []string{"list", "watch"},
+							},
+						},
+					}, nil
+				})
+
+				return k8sutil.ClientSets{
+					MClient: mClient,
+					KClient: kClient,
+				}
+			},
+		},
+		{
+			name:      "RequiredVerbsNotFoundInClusterRole",
+			namespace: "test",
+			shouldFail: true,
+			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
+				mClient := monitoringclient.NewSimpleClientset(&monitoringv1.PrometheusList{})
+				mClient.PrependReactor("get", "prometheuses", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &monitoringv1.Prometheus{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      tc.name,
+							Namespace: tc.namespace,
+						},
+					}, nil
+				})
+
+				kClient := fake.NewSimpleClientset(&rbacv1.ClusterRoleBindingList{})
+				kClient.PrependReactor("list", "clusterrolebindings", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &rbacv1.ClusterRoleBindingList{
+						Items: getPrometheusClusterRoleBinding(tc.namespace),
+					}, nil
+				})
+
+				kClient.PrependReactor("get", "clusterroles", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &rbacv1.ClusterRole{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "prometheus",
+						},
+						Rules: []rbacv1.PolicyRule{
+							{
+                                Resources: []string{"configmaps", "pods"},
+                                Verbs:     []string{"list", "watch"},
+                                APIGroups: []string{""},
+							},
+						},
+					}, nil
+				})
+
+				return k8sutil.ClientSets{
+					MClient: mClient,
+					KClient: kClient,
+				}
+			},
+		},
+		{
+			name:      "NonResourceURLsNotFoundInClusterRole",
+			namespace: "test",
+			shouldFail: true,
+			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
+				mClient := monitoringclient.NewSimpleClientset(&monitoringv1.PrometheusList{})
+				mClient.PrependReactor("get", "prometheuses", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &monitoringv1.Prometheus{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      tc.name,
+							Namespace: tc.namespace,
+						},
+					}, nil
+				})
+
+				kClient := fake.NewSimpleClientset(&rbacv1.ClusterRoleBindingList{})
+				kClient.PrependReactor("list", "clusterrolebindings", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &rbacv1.ClusterRoleBindingList{
+						Items: getPrometheusClusterRoleBinding(tc.namespace),
+					}, nil
+				})
+
+				kClient.PrependReactor("get", "clusterroles", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &rbacv1.ClusterRole{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "prometheus",
+						},
+						Rules: []rbacv1.PolicyRule{
+							{
+                                NonResourceURLs: []string{"/metrics"},
+                                Verbs:     []string{"post"},
+							},
+						},
+					}, nil
 				})
 
 				return k8sutil.ClientSets{
