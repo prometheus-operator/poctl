@@ -70,12 +70,16 @@ func RunPrometheusAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets, 
 
 	namespaceSelectorStatus, nilNamespaceSelectors := checkPrometheusNamespaceSelectorsStatus(namespaceSelectors)
 
+	if namespaceSelectorStatus{
+		slog.Info("Prometheus is compliant, no issues found", "name", name, "namespace", namespace)
+		return nil
+	}
+
 	if !namespaceSelectorStatus {
 		if len(nilNamespaceSelectors) > 0 {
-			//fmt.Printf("No %s is defined, defaulting to the same namespace of Prometheus\n", strings.Join(nilNamespaceSelectors, ", "))
 			checkSelectorsCreated, selectorLists := checkServiceDiscovery(ctx, clientSets, namespace)
-			if !checkSelectorsCreated {
-				fmt.Printf("No Service Selectors are created yet")
+			if !checkSelectorsCreated && selectorLists == nil {
+				return fmt.Errorf("No Service Selectors are created yet")
 			}
 			if len(nilNamespaceSelectors) == len(selectorLists) {
 				fmt.Println("All namespace selectors are either empty or properly defined.")
@@ -242,7 +246,6 @@ func checkPrometheusServiceSelectorsStatus(serviceSelectors map[string]interface
 	}
 
 	if len(emptyServiceSelectors) > 0 {
-		//fmt.Printf("%s are empty, Prometheus matches all objects.\n", strings.Join(emptyServiceSelectors, ", "))
 		return true, emptyServiceSelectors
 	}
 	return true, nil
