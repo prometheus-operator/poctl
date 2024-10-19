@@ -243,6 +243,46 @@ func TestPrometheusAnalyzer(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:      "PrometheusMatchesAllNamespaces",
+			namespace: "test",
+			shouldFail: false,
+			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
+				mClient := monitoringclient.NewSimpleClientset(&monitoringv1.PrometheusList{})
+				mClient.PrependReactor("get", "prometheuses", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &monitoringv1.Prometheus{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      tc.name,
+							Namespace: tc.namespace,
+						},
+						Spec: monitoringv1.PrometheusSpec{
+							CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
+								ServiceMonitorNamespaceSelector: &metav1.LabelSelector{
+									MatchLabels:      map[string]string{},
+									MatchExpressions: []metav1.LabelSelectorRequirement{},
+								},
+								ProbeNamespaceSelector: &metav1.LabelSelector{
+									MatchLabels:      map[string]string{},
+									MatchExpressions: []metav1.LabelSelectorRequirement{}, 
+								},
+								ScrapeConfigNamespaceSelector: &metav1.LabelSelector{
+									MatchLabels:      map[string]string{},
+									MatchExpressions: []metav1.LabelSelectorRequirement{},
+								},
+								PodMonitorNamespaceSelector: &metav1.LabelSelector{
+									MatchLabels:      map[string]string{},
+									MatchExpressions: []metav1.LabelSelectorRequirement{},
+								},
+							},
+						},
+					}, nil
+				})
+
+				return k8sutil.ClientSets{
+					MClient: mClient,
+				}
+			},
+		},
 	}
 
 	for _, tc := range tests {
