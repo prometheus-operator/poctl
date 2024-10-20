@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	clienttesting "k8s.io/client-go/testing"
@@ -276,6 +277,50 @@ func TestPrometheusAnalyzer(t *testing.T) {
 							},
 						},
 					}, nil
+				})
+
+				return k8sutil.ClientSets{
+					MClient: mClient,
+				}
+			},
+		},
+		{
+			name:      "PrometheusCurrentNamespaceNoSelectors",
+			namespace: "test",
+			shouldFail: true,
+			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
+				mClient := monitoringclient.NewSimpleClientset(&monitoringv1.PrometheusList{})
+				mClient.PrependReactor("get", "prometheuses", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &monitoringv1.Prometheus{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      tc.name,
+							Namespace: tc.namespace,
+						},
+						Spec: monitoringv1.PrometheusSpec{
+							CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
+								ServiceMonitorNamespaceSelector: nil,
+								ProbeNamespaceSelector:          nil,
+								ScrapeConfigNamespaceSelector:   nil,
+								PodMonitorNamespaceSelector:     nil,
+							},
+						},
+					}, nil
+				})
+
+				mClient.PrependReactor("list", "podmonitors", func(_ clienttesting.Action) (handled bool, ret runtime.Object, err error) {
+					return true, &monitoringv1.PodMonitorList{Items: []*monitoringv1.PodMonitor{}}, nil
+				})
+
+				mClient.PrependReactor("list", "servicemonitors", func(_ clienttesting.Action) (handled bool, ret runtime.Object, err error) {
+					return true, &monitoringv1.ServiceMonitorList{Items: []*monitoringv1.ServiceMonitor{}}, nil
+				})
+
+				mClient.PrependReactor("list", "probes", func(_ clienttesting.Action) (handled bool, ret runtime.Object, err error) {
+					return true, &monitoringv1.ProbeList{Items: []*monitoringv1.Probe{}}, nil
+				})
+
+				mClient.PrependReactor("list", "scrapeconfigs", func(_ clienttesting.Action) (handled bool, ret runtime.Object, err error) {
+					return true, &monitoringv1alpha1.ScrapeConfigList{Items: []*monitoringv1alpha1.ScrapeConfig{}}, nil
 				})
 
 				return k8sutil.ClientSets{
