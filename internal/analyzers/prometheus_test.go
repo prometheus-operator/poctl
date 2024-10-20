@@ -328,6 +328,90 @@ func TestPrometheusAnalyzer(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:      "PrometheusNoServiceSelectors",
+			namespace: "test",
+			shouldFail: true,
+			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
+				mClient := monitoringclient.NewSimpleClientset(&monitoringv1.PrometheusList{})
+				mClient.PrependReactor("get", "prometheuses", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &monitoringv1.Prometheus{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      tc.name,
+							Namespace: tc.namespace,
+						},
+						Spec: monitoringv1.PrometheusSpec{
+							CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
+								ServiceMonitorSelector: nil,
+								ProbeSelector:          nil,
+								ScrapeConfigSelector:   nil,
+								PodMonitorSelector:     nil,
+							},
+						},
+					}, nil
+				})
+
+				return k8sutil.ClientSets{
+					MClient: mClient,
+				}
+			},
+		},
+		{
+			name:      "PrometheusNoServiceSelectorsCreated",
+			namespace: "test",
+			shouldFail: true,
+			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
+				mClient := monitoringclient.NewSimpleClientset(&monitoringv1.PrometheusList{})
+				mClient.PrependReactor("get", "prometheuses", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &monitoringv1.Prometheus{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      tc.name,
+							Namespace: tc.namespace,
+						},
+						Spec: monitoringv1.PrometheusSpec{
+							CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
+								ServiceMonitorSelector: &metav1.LabelSelector{
+									MatchLabels:      map[string]string{},
+									MatchExpressions: []metav1.LabelSelectorRequirement{},
+								},
+								ProbeSelector: &metav1.LabelSelector{
+									MatchLabels:      map[string]string{},
+									MatchExpressions: []metav1.LabelSelectorRequirement{}, 
+								},
+								ScrapeConfigSelector: &metav1.LabelSelector{
+									MatchLabels:      map[string]string{},
+									MatchExpressions: []metav1.LabelSelectorRequirement{},
+								},
+								PodMonitorSelector: &metav1.LabelSelector{
+									MatchLabels:      map[string]string{},
+									MatchExpressions: []metav1.LabelSelectorRequirement{},
+								},
+							},
+						},
+					}, nil
+				})
+
+				mClient.PrependReactor("list", "podmonitors", func(_ clienttesting.Action) (handled bool, ret runtime.Object, err error) {
+					return true, &monitoringv1.PodMonitorList{Items: []*monitoringv1.PodMonitor{}}, nil
+				})
+
+				mClient.PrependReactor("list", "servicemonitors", func(_ clienttesting.Action) (handled bool, ret runtime.Object, err error) {
+					return true, &monitoringv1.ServiceMonitorList{Items: []*monitoringv1.ServiceMonitor{}}, nil
+				})
+
+				mClient.PrependReactor("list", "probes", func(_ clienttesting.Action) (handled bool, ret runtime.Object, err error) {
+					return true, &monitoringv1.ProbeList{Items: []*monitoringv1.Probe{}}, nil
+				})
+
+				mClient.PrependReactor("list", "scrapeconfigs", func(_ clienttesting.Action) (handled bool, ret runtime.Object, err error) {
+					return true, &monitoringv1alpha1.ScrapeConfigList{Items: []*monitoringv1alpha1.ScrapeConfig{}}, nil
+				})
+
+				return k8sutil.ClientSets{
+					MClient: mClient,
+				}
+			},
+		},
 	}
 
 	for _, tc := range tests {
