@@ -112,63 +112,63 @@ func RunPrometheusAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets, 
 }
 
 func checkClusterRoleRules(crb v1.ClusterRoleBinding, cr *v1.ClusterRole) error {
-	cmVerbsStatus := false
-	nonresourcesStatus := false
-	verbsStatus := true
+	var errs []string
 	verbsToCheck := []string{"get", "list", "watch"}
+	missingVerbs := []string{}
 
 	for _, rule := range cr.Rules {
 		for _, resource := range rule.Resources {
+			hasGet := false
 			if resource == "configmaps" {
 				for _, verb := range rule.Verbs {
 					if verb == "get" {
-						cmVerbsStatus = true
+						hasGet = true
+						break
 					}
+				}
+				if !hasGet {
+					errs = append(errs, fmt.Sprintf("ClusterRole %s does not include 'configmaps' with 'get' in its verbs", crb.RoleRef.Name))
 				}
 			} else {
 				for range rule.APIGroups {
-					if !containsVerb(rule.Verbs, verbsToCheck) {
-						verbsStatus = false
+					for _, requiredVerb := range verbsToCheck {
+						found := false
+						for _, verb := range rule.Verbs {
+							if verb == requiredVerb {
+								found = true
+								break
+							}
+						}
+						if !found {
+							missingVerbs = append(missingVerbs, requiredVerb)
+						}
+					}
+					if len(missingVerbs) > 0 {
+						errs = append(errs, fmt.Sprintf("ClusterRole %s is missing necessary verbs for APIGroups: %v", crb.RoleRef.Name, missingVerbs))
 					}
 				}
 			}
 		}
-		for _, nonresources := range rule.NonResourceURLs {
-			if nonresources == "/metrics" {
+		for _, nonResource := range rule.NonResourceURLs {
+			if nonResource == "/metrics" {
+				hasGet := false
 				for _, verb := range rule.Verbs {
 					if verb == "get" {
-						nonresourcesStatus = true
+						hasGet = true
+						break
 					}
+				}
+				if !hasGet {
+					errs = append(errs, fmt.Sprintf("ClusterRole %s does not include 'get' verb for NonResourceURL '/metrics'", crb.RoleRef.Name))
 				}
 			}
 		}
 	}
 
-	if !cmVerbsStatus {
-		return fmt.Errorf("ClusterRole %s does not does not include 'configmaps' with 'get' in its verbs", crb.RoleRef.Name)
-	}
-
-	if !nonresourcesStatus {
-		return fmt.Errorf("ClusterRole %s does not have proper verbs for NonResourceURLs", crb.RoleRef.Name)
-	}
-
-	if !verbsStatus {
-		return fmt.Errorf("ClusterRole %s does not have all the necessary verbs for APIGroups ", crb.RoleRef.Name)
+	if len(errs) > 0 {
+		return fmt.Errorf("Multiple errors found:\n%s", strings.Join(errs, "\n"))
 	}
 	return nil
-}
-
-func containsVerb(ruleVerbs, verbsToCheck []string) bool {
-	verbSet := make(map[string]bool)
-	for _, v := range ruleVerbs {
-		verbSet[v] = true
-	}
-	for _, v := range verbsToCheck {
-		if verbSet[v] {
-			return true
-		}
-	}
-	return false
 }
 
 func checkPrometheusNamespaceSelectorsStatus(namespaceSelectors map[string]interface{}) (bool, []string) {

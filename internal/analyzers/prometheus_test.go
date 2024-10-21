@@ -118,7 +118,7 @@ func TestPrometheusAnalyzer(t *testing.T) {
 			},
 		},
 		{
-			name:      "ConfigMapsNotFoundInClusterRole",
+			name:      "ConfigMapsVerbsNotFoundInClusterRole",
 			namespace: "test",
 			shouldFail: true,
 			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
