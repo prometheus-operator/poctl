@@ -81,10 +81,10 @@ func analyzeClusterRoleAndCRDRules(ctx context.Context, clientSets *k8sutil.Clie
 }
 
 func analyzeCRDRules(ctx context.Context, clientSets *k8sutil.ClientSets, crb v1.ClusterRoleBinding, rule v1.PolicyRule) error {
-	for _, crd := range crds.List {
-		crd, err := clientSets.APIExtensionsClient.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, crd, metav1.GetOptions{})
+	for _, crdName := range crds.List {
+		crd, err := clientSets.APIExtensionsClient.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, crdName, metav1.GetOptions{})
 		if err != nil {
-			return fmt.Errorf("failed to get CRD %s", crd)
+			return fmt.Errorf("failed to get CRD %s", crdName)
 		}
 
 		found := false
