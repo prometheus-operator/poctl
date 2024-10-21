@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/prometheus-operator/poctl/internal/k8sutil"
-	"github.com/prometheus-operator/poctl/internal/rbachelpers"
 	v1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,10 +41,8 @@ func RunPrometheusAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets, 
 	if err != nil {
 		return fmt.Errorf("failed to list RoleBindings: %w", err)
 	}
-	
-	rbacHelper := &rbachelpers.RBACHelper{}
 
-	if !rbacHelper.IsServiceAccountBoundToRoleBindingList(cRb, prometheus.Spec.ServiceAccountName) {
+	if !k8sutil.IsServiceAccountBoundToRoleBindingList(cRb, prometheus.Spec.ServiceAccountName) {
 		return fmt.Errorf("ServiceAccount %s is not bound to any RoleBindings", prometheus.Spec.ServiceAccountName)
 	}
 
