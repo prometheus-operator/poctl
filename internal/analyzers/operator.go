@@ -38,8 +38,7 @@ func RunOperatorAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets, na
 		return fmt.Errorf("failed to list RoleBindings: %w", err)
 	}
 
-	// Check if the ServiceAccount is bound to any ClusterRoleBindings
-	if !isServiceAccountBoundToRoleBindingList(cRb, op.Spec.Template.Spec.ServiceAccountName) {
+	if !k8sutil.IsServiceAccountBoundToRoleBindingList(cRb, op.Spec.Template.Spec.ServiceAccountName) {
 		return fmt.Errorf("ServiceAccount %s is not bound to any RoleBindings", op.Spec.Template.Spec.ServiceAccountName)
 	}
 
@@ -100,17 +99,4 @@ func analyzeCRDRules(ctx context.Context, clientSets *k8sutil.ClientSets, crb v1
 		}
 	}
 	return nil
-}
-
-func isServiceAccountBoundToRoleBindingList(clusterRoleBindings *v1.ClusterRoleBindingList, serviceAccountName string) bool {
-	for _, roleBinding := range clusterRoleBindings.Items {
-		if roleBinding.Subjects != nil {
-			for _, subject := range roleBinding.Subjects {
-				if subject.Kind == "ServiceAccount" && subject.Name == serviceAccountName {
-					return true
-				}
-			}
-		}
-	}
-	return false
 }
