@@ -16,15 +16,15 @@ package crds
 
 var (
 	List = []string{
-		"alertmanagers",
-		"alertmanagerconfigs",
-		"podmonitors",
-		"probes",
-		"prometheusagents",
-		"prometheuses",
-		"prometheusrules",
-		"scrapeconfigs",
-		"servicemonitors",
-		"thanosrulers",
+        "alertmanagers.monitoring.coreos.com",
+        "alertmanagerconfigs.monitoring.coreos.com",
+        "podmonitors.monitoring.coreos.com",
+        "probes.monitoring.coreos.com",
+        "prometheusagents.monitoring.coreos.com",
+        "prometheuses.monitoring.coreos.com",
+        "prometheusrules.monitoring.coreos.com",
+        "scrapeconfigs.monitoring.coreos.com",
+        "servicemonitors.monitoring.coreos.com",
+        "thanosrulers.monitoring.coreos.com",
 	}
 )
