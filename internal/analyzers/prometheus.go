@@ -67,44 +67,44 @@ func RunPrometheusAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets, 
 		}
 	}
 
-	if err := checkPrometheusNamespaceSelectors(ctx, clientSets, prometheus.Spec.PodMonitorNamespaceSelector); err != nil {
+	if err := checkResourceNamespaceSelectors(ctx, clientSets, prometheus.Spec.PodMonitorNamespaceSelector); err != nil {
 		return fmt.Errorf("podMonitorNamespaceSelector is not properly defined: %s", err)
 	}
 
-	if err := checkPrometheusNamespaceSelectors(ctx, clientSets, prometheus.Spec.ProbeNamespaceSelector); err != nil {
+	if err := checkResourceNamespaceSelectors(ctx, clientSets, prometheus.Spec.ProbeNamespaceSelector); err != nil {
 		return fmt.Errorf("probeNamespaceSelector is not properly defined: %s", err)
 	}
 
-	if err := checkPrometheusNamespaceSelectors(ctx, clientSets, prometheus.Spec.ServiceMonitorNamespaceSelector); err != nil {
+	if err := checkResourceNamespaceSelectors(ctx, clientSets, prometheus.Spec.ServiceMonitorNamespaceSelector); err != nil {
 		return fmt.Errorf("serviceMonitorNamespaceSelector is not properly defined: %s", err)
 	}
 
-	if err := checkPrometheusNamespaceSelectors(ctx, clientSets, prometheus.Spec.ScrapeConfigNamespaceSelector); err != nil {
+	if err := checkResourceNamespaceSelectors(ctx, clientSets, prometheus.Spec.ScrapeConfigNamespaceSelector); err != nil {
 		return fmt.Errorf("scrapeConfigNamespaceSelector is not properly defined: %s", err)
 	}
 
-	if err := checkPrometheusNamespaceSelectors(ctx, clientSets, prometheus.Spec.RuleNamespaceSelector); err != nil {
+	if err := checkResourceNamespaceSelectors(ctx, clientSets, prometheus.Spec.RuleNamespaceSelector); err != nil {
 		return fmt.Errorf("ruleNamespaceSelector is not properly defined: %s", err)
 	}
 
-	if err := checkPrometheusServiceSelectors(ctx, clientSets, prometheus.Spec.ServiceMonitorSelector, ServiceMonitor, namespace); err != nil {
-		return fmt.Errorf("serviceMonitor is not properly defined: %s", err)
+	if err := checkResourceLabelSelectors(ctx, clientSets, prometheus.Spec.ServiceMonitorSelector, ServiceMonitor, namespace); err != nil {
+		return fmt.Errorf("serviceMonitorSelector is not properly defined: %s", err)
 	}
 
-	if err := checkPrometheusServiceSelectors(ctx, clientSets, prometheus.Spec.PodMonitorSelector, PodMonitor, namespace); err != nil {
-		return fmt.Errorf("podMonitor is not properly defined: %s", err)
+	if err := checkResourceLabelSelectors(ctx, clientSets, prometheus.Spec.PodMonitorSelector, PodMonitor, namespace); err != nil {
+		return fmt.Errorf("podMonitorSelector is not properly defined: %s", err)
 	}
 
-	if err := checkPrometheusServiceSelectors(ctx, clientSets, prometheus.Spec.ProbeSelector, Probe, namespace); err != nil {
-		return fmt.Errorf("probe is not properly defined: %s", err)
+	if err := checkResourceLabelSelectors(ctx, clientSets, prometheus.Spec.ProbeSelector, Probe, namespace); err != nil {
+		return fmt.Errorf("probeSelector is not properly defined: %s", err)
 	}
 
-	if err := checkPrometheusServiceSelectors(ctx, clientSets, prometheus.Spec.ScrapeConfigSelector, ScrapeConfig, namespace); err != nil {
-		return fmt.Errorf("scrapeConfig is not properly defined: %s", err)
+	if err := checkResourceLabelSelectors(ctx, clientSets, prometheus.Spec.ScrapeConfigSelector, ScrapeConfig, namespace); err != nil {
+		return fmt.Errorf("scrapeConfigSelector is not properly defined: %s", err)
 	}
 
-	if err := checkPrometheusServiceSelectors(ctx, clientSets, prometheus.Spec.RuleSelector, PrometheusRule, namespace); err != nil {
-		return fmt.Errorf("prometheusRule is not properly defined: %s", err)
+	if err := checkResourceLabelSelectors(ctx, clientSets, prometheus.Spec.RuleSelector, PrometheusRule, namespace); err != nil {
+		return fmt.Errorf("ruleSelector is not properly defined: %s", err)
 	}
 
 	slog.Info("Prometheus is compliant, no issues found", "name", name, "namespace", namespace)
@@ -171,7 +171,7 @@ func checkClusterRoleRules(crb v1.ClusterRoleBinding, cr *v1.ClusterRole) error 
 	return nil
 }
 
-func checkPrometheusNamespaceSelectors(ctx context.Context, clientSets *k8sutil.ClientSets, labelSelector *metav1.LabelSelector) error {
+func checkResourceNamespaceSelectors(ctx context.Context, clientSets *k8sutil.ClientSets, labelSelector *metav1.LabelSelector) error {
 	if labelSelector == nil {
 		return nil
 	}
@@ -198,7 +198,7 @@ func checkPrometheusNamespaceSelectors(ctx context.Context, clientSets *k8sutil.
 	return nil
 }
 
-func checkPrometheusServiceSelectors(ctx context.Context, clientSets *k8sutil.ClientSets, labelSelector *metav1.LabelSelector, resourceName, namespace string) error {
+func checkResourceLabelSelectors(ctx context.Context, clientSets *k8sutil.ClientSets, labelSelector *metav1.LabelSelector, resourceName, namespace string) error {
 	if labelSelector == nil {
 		return fmt.Errorf("%s selector is not defined", resourceName)
 	}
