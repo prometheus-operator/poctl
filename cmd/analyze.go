@@ -30,6 +30,7 @@ type AnalyzeKind string
 const (
 	ServiceMonitor AnalyzeKind = "servicemonitor"
 	Operator       AnalyzeKind = "operator"
+	Prometheus     AnalyzeKind = "prometheus"
 )
 
 type AnalyzeFlags struct {
@@ -78,6 +79,8 @@ func run(cmd *cobra.Command, _ []string) error {
 		return analyzers.RunServiceMonitorAnalyzer(cmd.Context(), clientSets, analyzerFlags.Name, analyzerFlags.Namespace)
 	case Operator:
 		return analyzers.RunOperatorAnalyzer(cmd.Context(), clientSets, analyzerFlags.Name, analyzerFlags.Namespace)
+	case Prometheus:
+		return analyzers.RunPrometheusAnalyzer(cmd.Context(), clientSets, analyzerFlags.Name, analyzerFlags.Namespace)
 	default:
 		return fmt.Errorf("kind %s not supported", analyzerFlags.Kind)
 	}

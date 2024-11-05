@@ -37,6 +37,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	v1 "k8s.io/api/rbac/v1"
 )
 
 var ApplyOption = metav1.ApplyOptions{
@@ -143,4 +144,17 @@ func GetClientSets(kubeconfig string) (*ClientSets, error) {
 		DClient:             kdynamicClient,
 		APIExtensionsClient: apiExtensions,
 	}, nil
+}
+
+func IsServiceAccountBoundToRoleBindingList(clusterRoleBindings *v1.ClusterRoleBindingList, serviceAccountName string) bool {
+	for _, roleBinding := range clusterRoleBindings.Items {
+		if roleBinding.Subjects != nil {
+			for _, subject := range roleBinding.Subjects {
+				if subject.Kind == "ServiceAccount" && subject.Name == serviceAccountName {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
