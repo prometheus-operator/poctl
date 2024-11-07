@@ -67,23 +67,23 @@ func RunPrometheusAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets, 
 		}
 	}
 
-	if err := checkResourceNamespaceSelectors(ctx, clientSets, prometheus.Spec.PodMonitorNamespaceSelector); err != nil {
+	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheus.Spec.PodMonitorNamespaceSelector); err != nil {
 		return fmt.Errorf("podMonitorNamespaceSelector is not properly defined: %s", err)
 	}
 
-	if err := checkResourceNamespaceSelectors(ctx, clientSets, prometheus.Spec.ProbeNamespaceSelector); err != nil {
+	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheus.Spec.ProbeNamespaceSelector); err != nil {
 		return fmt.Errorf("probeNamespaceSelector is not properly defined: %s", err)
 	}
 
-	if err := checkResourceNamespaceSelectors(ctx, clientSets, prometheus.Spec.ServiceMonitorNamespaceSelector); err != nil {
+	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheus.Spec.ServiceMonitorNamespaceSelector); err != nil {
 		return fmt.Errorf("serviceMonitorNamespaceSelector is not properly defined: %s", err)
 	}
 
-	if err := checkResourceNamespaceSelectors(ctx, clientSets, prometheus.Spec.ScrapeConfigNamespaceSelector); err != nil {
+	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheus.Spec.ScrapeConfigNamespaceSelector); err != nil {
 		return fmt.Errorf("scrapeConfigNamespaceSelector is not properly defined: %s", err)
 	}
 
-	if err := checkResourceNamespaceSelectors(ctx, clientSets, prometheus.Spec.RuleNamespaceSelector); err != nil {
+	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheus.Spec.RuleNamespaceSelector); err != nil {
 		return fmt.Errorf("ruleNamespaceSelector is not properly defined: %s", err)
 	}
 
@@ -168,33 +168,6 @@ func checkClusterRoleRules(crb v1.ClusterRoleBinding, cr *v1.ClusterRole) error 
 	if len(errs) > 0 {
 		return fmt.Errorf("multiple errors found:\n%s", strings.Join(errs, "\n"))
 	}
-	return nil
-}
-
-func checkResourceNamespaceSelectors(ctx context.Context, clientSets *k8sutil.ClientSets, labelSelector *metav1.LabelSelector) error {
-	if labelSelector == nil {
-		return nil
-	}
-
-	if len(labelSelector.MatchLabels) == 0 && len(labelSelector.MatchExpressions) == 0 {
-		return nil
-	}
-
-	labelMap, err := metav1.LabelSelectorAsMap(labelSelector)
-	if err != nil {
-		return fmt.Errorf("invalid label selector format in %s: %v", labelSelector, err)
-	}
-
-	namespaces, err := clientSets.KClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{LabelSelector: labels.SelectorFromSet(labelMap).String()})
-
-	if err != nil {
-		return fmt.Errorf("failed to list Namespaces in %s: %v", labelSelector, err)
-	}
-
-	if len(namespaces.Items) == 0 {
-		return fmt.Errorf("no namespaces match the selector %s", labelSelector)
-	}
-
 	return nil
 }
 
