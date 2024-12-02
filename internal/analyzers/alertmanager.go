@@ -22,6 +22,7 @@ import (
 	"github.com/prometheus-operator/poctl/internal/k8sutil"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 func RunAlertmanagerAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets, name, namespace string) error {
@@ -55,11 +56,15 @@ func RunAlertmanagerAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets
 	// If 'AlertmanagerConfigNamespaceSelector' is nil, only check own namespace.
 	if alertmanager.Spec.AlertmanagerConfigNamespaceSelector != nil {
 		if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, alertmanager.Spec.AlertmanagerConfigNamespaceSelector); err != nil {
-			return fmt.Errorf("AlertmanagerConfigNamespaceSelector is not properly defined: %s", err)
+			return fmt.Errorf("alertmanagerConfigNamespaceSelector is not properly defined: %s", err)
 		}
-	} //else if alertmanager.Spec.AlertmanagerConfigNamespaceSelector == nil {
+	}
 
-	//}
+	if alertmanager.Spec.AlertmanagerConfigSelector != nil {
+		if err := checkAlertmanagerConfigs(ctx, clientSets, alertmanager.Spec.AlertmanagerConfigSelector, namespace); err != nil {
+			return fmt.Errorf("alertmanagerConfigSelectors is not properly defined: %s", err)
+		}
+	}
 
 	slog.Info("Alertmanager is compliant, no issues found", "name", name, "namespace", namespace)
 	return nil
@@ -77,5 +82,28 @@ func checkAlertmanagerSecret(ctx context.Context, clientSets *k8sutil.ClientSets
 	if !found {
 		return fmt.Errorf("the %s key not found in Secret %s", secretData, secretName)
 	}
+	return nil
+}
+
+func checkAlertmanagerConfigs(ctx context.Context, clientSets *k8sutil.ClientSets, labelSelector *metav1.LabelSelector, namespace string) error {
+
+	if len(labelSelector.MatchLabels) == 0 && len(labelSelector.MatchExpressions) == 0 {
+		return nil
+	}
+
+	labelMap, err := metav1.LabelSelectorAsMap(labelSelector)
+
+	if err != nil {
+		return fmt.Errorf("invalid label selector format in %v", err)
+	}
+
+	alertmamagerConfigs, err := clientSets.MClient.MonitoringV1alpha1().AlertmanagerConfigs(namespace).List(ctx, metav1.ListOptions{LabelSelector: labels.SelectorFromSet(labelMap).String()})
+	if err != nil {
+		return fmt.Errorf("failed to list AlertmanagerConfigs in %s: %v", namespace, err)
+	}
+	if len(alertmamagerConfigs.Items) == 0 {
+		return fmt.Errorf("no AlertmanagerConfigs match the provided selector in %s", namespace)
+	}
+
 	return nil
 }
