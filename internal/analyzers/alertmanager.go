@@ -66,6 +66,13 @@ func RunAlertmanagerAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets
 		}
 	}
 
+	if alertmanager.Spec.AlertmanagerConfiguration != nil {
+		_, err := clientSets.MClient.MonitoringV1alpha1().AlertmanagerConfigs(namespace).Get(ctx, alertmanager.Spec.AlertmanagerConfiguration.Name, metav1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to get AlertmanagerConfig: %w", err)
+		}
+	}
+
 	slog.Info("Alertmanager is compliant, no issues found", "name", name, "namespace", namespace)
 	return nil
 }
