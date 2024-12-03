@@ -19,9 +19,12 @@ import (
 
 	"github.com/prometheus-operator/poctl/internal/k8sutil"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned/fake"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	clienttesting "k8s.io/client-go/testing"
@@ -50,6 +53,167 @@ func TestAlertmanagerAnalyzer(t *testing.T) {
 				return k8sutil.ClientSets{
 					MClient: mClient,
 					KClient: kClient,
+				}
+			},
+		},
+		{
+			name:       "AlertmanagerMissingServiceAccount",
+			namespace:  "test",
+			shouldFail: true,
+			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
+				mClient := monitoringclient.NewSimpleClientset(&monitoringv1.AlertmanagerList{})
+				mClient.PrependReactor("get", "alertmanagers", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &monitoringv1.Alertmanager{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      tc.name,
+							Namespace: tc.namespace,
+						},
+						Spec: monitoringv1.AlertmanagerSpec{
+							ServiceAccountName: "test-sa",
+						},
+					}, nil
+				})
+
+				kClient := fake.NewSimpleClientset(&corev1.ServiceAccount{})
+				kClient.PrependReactor("get", "serviceaccount", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, nil, errors.NewInternalError(nil)
+				})
+				return k8sutil.ClientSets{
+					MClient: mClient,
+					KClient: kClient,
+				}
+			},
+		},
+		{
+			name:       "AlertmanagerFailToGetConfigSecret",
+			namespace:  "test",
+			shouldFail: true,
+			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
+				mClient := monitoringclient.NewSimpleClientset(&monitoringv1.AlertmanagerList{})
+				mClient.PrependReactor("get", "alertmanagers", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &monitoringv1.Alertmanager{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      tc.name,
+							Namespace: tc.namespace,
+						},
+						Spec: monitoringv1.AlertmanagerSpec{
+							ConfigSecret: "test-secret",
+						},
+					}, nil
+				})
+
+				kClient := fake.NewSimpleClientset(&corev1.Secret{})
+				kClient.PrependReactor("get", "secret", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, nil, errors.NewInternalError(nil)
+				})
+				return k8sutil.ClientSets{
+					MClient: mClient,
+					KClient: kClient,
+				}
+			},
+		},
+		{
+			name:       "AlertmanagerNamespaceSelectorWithoutMatchLabels",
+			namespace:  "test",
+			shouldFail: true,
+			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
+				mClient := monitoringclient.NewSimpleClientset(&monitoringv1.AlertmanagerList{})
+				mClient.PrependReactor("get", "alertmanagers", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &monitoringv1.Alertmanager{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      tc.name,
+							Namespace: tc.namespace,
+						},
+						Spec: monitoringv1.AlertmanagerSpec{
+							AlertmanagerConfigNamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"environment": "test"},
+							},
+						},
+					}, nil
+				})
+
+				kClient := fake.NewSimpleClientset(&corev1.Namespace{})
+				kClient.PrependReactor("get", "namespace", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &corev1.NamespaceList{
+						Items: []corev1.Namespace{
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:   "test-namespace",
+									Labels: map[string]string{"another": "label"},
+								},
+							},
+						},
+					}, nil
+				})
+				return k8sutil.ClientSets{
+					MClient: mClient,
+					KClient: kClient,
+				}
+			},
+		},
+		{
+			name:       "AlertmanagerSelectorWithoutMatchLabels",
+			namespace:  "test",
+			shouldFail: true,
+			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
+				mClient := monitoringclient.NewSimpleClientset(&monitoringv1.AlertmanagerList{})
+				mClient.PrependReactor("get", "alertmanagers", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &monitoringv1.Alertmanager{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      tc.name,
+							Namespace: tc.namespace,
+						},
+						Spec: monitoringv1.AlertmanagerSpec{
+							AlertmanagerConfigNamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"amconfig": "test"},
+							},
+						},
+					}, nil
+				})
+
+				mClient.PrependReactor("get", "alertmanagerconfigs", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &monitoringv1alpha1.AlertmanagerConfigList{
+						Items: []*monitoringv1alpha1.AlertmanagerConfig{
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "alertmanagerconfigs-crd",
+									Namespace: tc.namespace,
+									Labels:    map[string]string{"label": "another-value"},
+								},
+							},
+						},
+					}, nil
+				})
+				return k8sutil.ClientSets{
+					MClient: mClient,
+				}
+			},
+		},
+		{
+			name:       "AlertmanagerFailedGetAMConfigs",
+			namespace:  "test",
+			shouldFail: true,
+			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
+				mClient := monitoringclient.NewSimpleClientset(&monitoringv1.AlertmanagerList{})
+				mClient.PrependReactor("get", "alertmanagers", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &monitoringv1.Alertmanager{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      tc.name,
+							Namespace: tc.namespace,
+						},
+						Spec: monitoringv1.AlertmanagerSpec{
+							AlertmanagerConfiguration: &monitoringv1.AlertmanagerConfiguration{
+								Name: "test-amconfig",
+							},
+						},
+					}, nil
+				})
+
+				mClient.PrependReactor("get", "alertmanagerconfigs", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, nil, errors.NewNotFound(monitoringv1alpha1.Resource("alertmanagerconfigs"), tc.name)
+				})
+				return k8sutil.ClientSets{
+					MClient: mClient,
 				}
 			},
 		},
