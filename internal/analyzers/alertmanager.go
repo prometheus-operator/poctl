@@ -36,7 +36,10 @@ func RunAlertmanagerAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets
 
 	_, err = clientSets.KClient.CoreV1().ServiceAccounts(namespace).Get(ctx, alertmanager.Spec.ServiceAccountName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to list ServiceAcounts: %w", err)
+		if errors.IsNotFound(err) {
+			return fmt.Errorf("alertmanager serviceaccount not found in namespace %s", namespace)
+		}
+		return fmt.Errorf("error while getting ServiceAcounts: %w", err)
 	}
 
 	if alertmanager.Spec.AlertmanagerConfigSelector == nil && alertmanager.Spec.AlertmanagerConfiguration == nil {
@@ -45,7 +48,8 @@ func RunAlertmanagerAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets
 			if err := checkAlertmanagerSecret(ctx, clientSets, alertmanager.Spec.ConfigSecret, namespace, "alertmanager.yaml"); err != nil {
 				return fmt.Errorf("error checking Alertmanager secret: %w", err)
 			}
-		} else if alertmanager.Spec.ConfigSecret == "" {
+		}
+		if alertmanager.Spec.ConfigSecret == "" {
 			// use the default generated secret from pkg/alertmanager/statefulset.go
 			amConfigSecretName := fmt.Sprintf("alertmanager-%s-generated", alertmanager.Name)
 			if err := checkAlertmanagerSecret(ctx, clientSets, amConfigSecretName, namespace, "alertmanager.yaml.gz"); err != nil {
@@ -69,7 +73,10 @@ func RunAlertmanagerAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets
 	if alertmanager.Spec.AlertmanagerConfiguration != nil {
 		_, err := clientSets.MClient.MonitoringV1alpha1().AlertmanagerConfigs(namespace).Get(ctx, alertmanager.Spec.AlertmanagerConfiguration.Name, metav1.GetOptions{})
 		if err != nil {
-			return fmt.Errorf("failed to get AlertmanagerConfig: %w", err)
+			if errors.IsNotFound(err) {
+				return fmt.Errorf("alertmanagerConfigs not found in namespace %s", namespace)
+			}
+			return fmt.Errorf("error while getting AlertmanagerConfig: %w", err)
 		}
 	}
 
@@ -80,7 +87,10 @@ func RunAlertmanagerAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets
 func checkAlertmanagerSecret(ctx context.Context, clientSets *k8sutil.ClientSets, secretName, namespace string, secretData string) error {
 	alertmanagerSecret, err := clientSets.KClient.CoreV1().Secrets(namespace).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to get alertmanager secret %s %v", secretName, err)
+		if errors.IsNotFound(err) {
+			return fmt.Errorf("failed to get alertmanager secret %s not found in namespace %s", secretName, namespace)
+		}
+		return fmt.Errorf("error while getting alertmanager secret%s %v", secretName, err)
 	}
 	if len(alertmanagerSecret.Data) == 0 {
 		return fmt.Errorf("alertmanager Secret %s is empty", secretName)
@@ -93,13 +103,11 @@ func checkAlertmanagerSecret(ctx context.Context, clientSets *k8sutil.ClientSets
 }
 
 func checkAlertmanagerConfigs(ctx context.Context, clientSets *k8sutil.ClientSets, labelSelector *metav1.LabelSelector, namespace string) error {
-
 	if len(labelSelector.MatchLabels) == 0 && len(labelSelector.MatchExpressions) == 0 {
 		return nil
 	}
 
 	labelMap, err := metav1.LabelSelectorAsMap(labelSelector)
-
 	if err != nil {
 		return fmt.Errorf("invalid label selector format in %v", err)
 	}
