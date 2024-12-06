@@ -113,6 +113,78 @@ func TestAlertmanagerAnalyzer(t *testing.T) {
 			},
 		},
 		{
+			name:       "AlertmanagerSecretEmptyData",
+			namespace:  "test",
+			shouldFail: true,
+			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
+				mClient := monitoringclient.NewSimpleClientset(&monitoringv1.AlertmanagerList{})
+				mClient.PrependReactor("get", "alertmanagers", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &monitoringv1.Alertmanager{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      tc.name,
+							Namespace: tc.namespace,
+						},
+						Spec: monitoringv1.AlertmanagerSpec{
+							ConfigSecret: "test-secret",
+						},
+					}, nil
+				})
+
+				kClient := fake.NewSimpleClientset(&corev1.Secret{})
+				kClient.PrependReactor("get", "secrets", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-secret",
+							Namespace: tc.namespace,
+						},
+						Data: map[string][]byte{},
+					}, nil
+				})
+
+				return k8sutil.ClientSets{
+					MClient: mClient,
+					KClient: kClient,
+				}
+			},
+		},
+		{
+			name:       "AlertmanagerSecretKeyNotFound",
+			namespace:  "test",
+			shouldFail: true,
+			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
+				mClient := monitoringclient.NewSimpleClientset(&monitoringv1.AlertmanagerList{})
+				mClient.PrependReactor("get", "alertmanagers", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &monitoringv1.Alertmanager{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      tc.name,
+							Namespace: tc.namespace,
+						},
+						Spec: monitoringv1.AlertmanagerSpec{
+							ConfigSecret: "test-secret",
+						},
+					}, nil
+				})
+
+				kClient := fake.NewSimpleClientset(&corev1.Secret{})
+				kClient.PrependReactor("get", "secrets", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-secret",
+							Namespace: tc.namespace,
+						},
+						Data: map[string][]byte{
+							"some-other-key": []byte("value"),
+						},
+					}, nil
+				})
+
+				return k8sutil.ClientSets{
+					MClient: mClient,
+					KClient: kClient,
+				}
+			},
+		},
+		{
 			name:       "AlertmanagerNamespaceSelectorWithoutMatchLabels",
 			namespace:  "test",
 			shouldFail: true,
