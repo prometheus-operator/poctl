@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
@@ -184,6 +185,65 @@ func CheckResourceNamespaceSelectors(ctx context.Context, clientSets ClientSets,
 	if len(namespaces.Items) == 0 {
 		return fmt.Errorf("no namespaces match the selector %s", labelSelector)
 	}
+	return nil
+}
 
+func CheckPrometheusClusterRoleRules(crb v1.ClusterRoleBinding, cr *v1.ClusterRole) error {
+	var errs []string
+	verbsToCheck := []string{"get", "list", "watch"}
+	missingVerbs := []string{}
+
+	for _, rule := range cr.Rules {
+		for _, resource := range rule.Resources {
+			found := false
+			if resource == "configmaps" {
+				for _, verb := range rule.Verbs {
+					if verb == "get" {
+						found = true
+						break
+					}
+				}
+				if !found {
+					errs = append(errs, fmt.Sprintf("ClusterRole %s does not include 'configmaps' with 'get' in its verbs", crb.RoleRef.Name))
+				}
+				continue
+			}
+			for range rule.APIGroups {
+				for _, requiredVerb := range verbsToCheck {
+					found := false
+					for _, verb := range rule.Verbs {
+						if verb == requiredVerb {
+							found = true
+							break
+						}
+					}
+					if !found {
+						missingVerbs = append(missingVerbs, requiredVerb)
+					}
+				}
+				if len(missingVerbs) > 0 {
+					errs = append(errs, fmt.Sprintf("ClusterRole %s is missing necessary verbs for APIGroups: %v", crb.RoleRef.Name, missingVerbs))
+				}
+			}
+		}
+		for _, nonResource := range rule.NonResourceURLs {
+			if nonResource == "/metrics" {
+				hasGet := false
+				for _, verb := range rule.Verbs {
+					if verb == "get" {
+						hasGet = true
+						break
+					}
+				}
+				if !hasGet {
+					errs = append(errs, fmt.Sprintf("ClusterRole %s does not include 'get' verb for NonResourceURL '/metrics'", crb.RoleRef.Name))
+				}
+			}
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("multiple errors found:\n%s", strings.Join(errs, "\n"))
+	}
 	return nil
 }
