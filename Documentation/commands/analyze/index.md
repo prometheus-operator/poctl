@@ -84,7 +84,6 @@ The Alertmanager must be deployed in the Kubernetes cluster, which can be confir
 
 Alertmanager condifuration needs to be provided, either:
 
-* As a Kubernetes secret provided by the user, that needs to ensure the data is stored in a file called alertmanager.yaml;
-* The Operator will provide a default generated Kubernetes secret to use;
-* Via the AlertmanagerConfig CRDs (Custom Resource Definitions), that should be matched by a Namespace selector in a given namespace, a ConfigSelector or the ConfigSelector Name.
-
+* As a Kubernetes secret provided by the user, that needs to ensure the data is stored in a file called alertmanager.yaml
+* The Operator will provide a default generated Kubernetes secret to use
+* Via the AlertmanagerConfig CRDs (Custom Resource Definitions), that should be matched by a Namespace selector in a given namespace, a ConfigSelector or the ConfigSelector Name
