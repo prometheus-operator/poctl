@@ -16,6 +16,7 @@ package k8sutil
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -26,10 +27,12 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
+	v1 "k8s.io/api/rbac/v1"
 	apiv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiExtensions "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/dynamic"
@@ -37,7 +40,6 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	v1 "k8s.io/api/rbac/v1"
 )
 
 var ApplyOption = metav1.ApplyOptions{
@@ -157,4 +159,31 @@ func IsServiceAccountBoundToRoleBindingList(clusterRoleBindings *v1.ClusterRoleB
 		}
 	}
 	return false
+}
+
+func CheckResourceNamespaceSelectors(ctx context.Context, clientSets ClientSets, labelSelector *metav1.LabelSelector) error {
+	if labelSelector == nil {
+		return nil
+	}
+
+	if len(labelSelector.MatchLabels) == 0 && len(labelSelector.MatchExpressions) == 0 {
+		return nil
+	}
+
+	labelMap, err := metav1.LabelSelectorAsMap(labelSelector)
+	if err != nil {
+		return fmt.Errorf("invalid label selector format in %s: %v", labelSelector, err)
+	}
+
+	namespaces, err := clientSets.KClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{LabelSelector: labels.SelectorFromSet(labelMap).String()})
+
+	if err != nil {
+		return fmt.Errorf("failed to list Namespaces in %s: %v", labelSelector, err)
+	}
+
+	if len(namespaces.Items) == 0 {
+		return fmt.Errorf("no namespaces match the selector %s", labelSelector)
+	}
+
+	return nil
 }
