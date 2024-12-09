@@ -28,7 +28,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-const LatestNodeExporterVersion = "1.8.1"
+const LatestNodeExporterVersion = "1.8.2"
 
 type NodeExporterBuilder struct {
 	labels         map[string]string
