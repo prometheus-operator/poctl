@@ -84,8 +84,8 @@ The Alertmanager object must exist in the Kubernetes cluster, which can be confi
 
 Alertmanager configuration must be provided in one of the following ways:
 
-- **User-provided Kubernetes Secret**: The user must ensure the configuration data is stored in a file named `alertmanager.yaml`.  
-- **Default Kubernetes Secret**: The Operator will generate and provide a default secret for use.  
+- **User-provided Kubernetes Secret**: The user must ensure the configuration data is stored in a file named `alertmanager.yaml`.
+- **Default Kubernetes Secret**: The Operator will generate and provide a default secret for use.
 - **AlertmanagerConfig CRDs (Custom Resource Definitions)**: These must match a **Namespace Selector** in the specified namespace, a **ConfigSelector**, or the **ConfigSelector Name**.
 
 * As a Kubernetes secret provided by the user, that needs to ensure the data is stored in a file called alertmanager.yaml
