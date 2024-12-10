@@ -62,7 +62,7 @@ For instance, if the Prometheus Operator is managing only Prometheus instances, 
 
 ### Prometheus Existence
 
-The Prometheus must be deployed in the Kubernetes cluster, which can be confirmed by checking for the presence of the Prometheus CRDs (Custom Resource Definitions) in the specified namespace and under the given name.
+The Prometheus object must exist in the Kubernetes cluster, which can be confirmed by checking for the presence of the Prometheus CR (Custom Resource) in the specified namespace and under the given name.
 
 ### Prometheus RBAC Rules
 
