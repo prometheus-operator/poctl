@@ -72,7 +72,7 @@ Since Prometheus just reads Objects in the Kubernetes API, it requires the get, 
 
 ### Prometheus Namespace Selectors and Service Selectors
 
-The Prometheus server requires proper service discovery to be enabled. In order for that we need to ensure that any Namespace Selector defined has a matching existing namespace. The same applies for Service Selectors defined, as if any of then is defined (ServiceMonitor, PodMonitor, ScrapeConfig Probe PrometheusRule) the CRDs (Custom Resource Definitions) needs to exits and properly matched.
+The Prometheus server relies on proper service discovery to function correctly. To achieve this, we must ensure that any defined Namespace Selector corresponds to an existing namespace. Similarly, for Service Selectors, it is crucial that they align with existing resources. Whether using ServiceMonitor, PodMonitor, ScrapeConfig, Probe, or PrometheusRule, the respective Custom Resource (CR) must exist and be properly matched.
 
 ## Analyze Alertmanager
 
