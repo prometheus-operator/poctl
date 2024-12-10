@@ -57,3 +57,37 @@ The Prometheus Operator must be deployed in the Kubernetes cluster, which can be
 The Prometheus Operator deployment requires proper RBAC (Role-Based Access Control) rules to function correctly. This means the service account associated with the Prometheus Operator must have permissions aligned with the Prometheus Operator CRDs (Custom Resource Definitions) present in the cluster.
 
 For instance, if the Prometheus Operator is managing only Prometheus instances, the service account should have the necessary permissions to create, update, and delete Prometheus resources, but it should not have permissions to manage other resources like Alertmanager.
+
+## Analyze Prometheus
+
+### Prometheus Existence
+
+The Prometheus object must exist in the Kubernetes cluster, which can be confirmed by checking for the presence of the Prometheus CR (Custom Resource) in the specified namespace and under the given name.
+
+### Prometheus RBAC Rules
+
+The Prometheus server requires proper RBAC (Role-Based Access Control) rules to function correctly. This means the service account associated with the Prometheus must have permissions aligned with the Prometheus CRDs (Custom Resource Definitions) present in the cluster.
+
+Since Prometheus just reads Objects in the Kubernetes API, it requires the get, list, and watch actions. As Prometheus can also be used to scrape metrics from the Kubernetes apiserver, it also requires access to the /metrics/ endpoint of it. In addition to the rules for Prometheus itself, the Prometheus needs to be able to get configmaps to be able to pull in rule files from configmap objects.
+
+### Prometheus Namespace Selectors and Service Selectors
+
+The Prometheus server relies on proper service discovery to function correctly. To achieve this, we must ensure that any defined Namespace Selector corresponds to an existing namespace. Similarly, for Service Selectors, it is crucial that they align with existing resources. Whether using ServiceMonitor, PodMonitor, ScrapeConfig, Probe, or PrometheusRule, the respective Custom Resource (CR) must exist and be properly matched.
+
+## Analyze Alertmanager
+
+### Alertmanager Existence
+
+The Alertmanager object must exist in the Kubernetes cluster, which can be confirmed by checking for the presence of the Prometheus CR (Custom Resource) in the specified namespace and under the given name.
+
+### Alertmanager Configuration
+
+Alertmanager configuration must be provided in one of the following ways:
+
+- **User-provided Kubernetes Secret**: The user must ensure the configuration data is stored in a file named `alertmanager.yaml`.
+- **Default Kubernetes Secret**: The Operator will generate and provide a default secret for use.
+- **AlertmanagerConfig CRDs (Custom Resource Definitions)**: These must match a **Namespace Selector** in the specified namespace, a **ConfigSelector**, or the **ConfigSelector Name**.
+
+* As a Kubernetes secret provided by the user, that needs to ensure the data is stored in a file called alertmanager.yaml
+* The Operator will provide a default generated Kubernetes secret to use
+* Via the AlertmanagerConfig CRDs (Custom Resource Definitions), that should be matched by a Namespace selector in a given namespace, a ConfigSelector or the ConfigSelector Name
