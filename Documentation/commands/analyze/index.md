@@ -78,7 +78,7 @@ The Prometheus server requires proper service discovery to be enabled. In order 
 
 ### Alertmanager Existence
 
-The Alertmanager must be deployed in the Kubernetes cluster, which can be confirmed by checking for the presence of the Prometheus CRDs (Custom Resource Definitions) in the specified namespace and under the given name.
+The Alertmanager object must exist in the Kubernetes cluster, which can be confirmed by checking for the presence of the Prometheus CR (Custom Resource) in the specified namespace and under the given name.
 
 ### Alertmanager Configuration
 
