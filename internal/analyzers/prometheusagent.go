@@ -56,6 +56,38 @@ func RunPrometheusAgentAnalyzer(ctx context.Context, clientSets *k8sutil.ClientS
 		}
 	}
 
-	slog.Info("Prometheus Agent is compliant, no issues found", "name", name, "namespace", namespace)
+	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheusagent.Spec.PodMonitorNamespaceSelector); err != nil {
+		return fmt.Errorf("podMonitorNamespaceSelector is not properly defined: %s", err)
+	}
+
+	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheusagent.Spec.ProbeNamespaceSelector); err != nil {
+		return fmt.Errorf("probeNamespaceSelector is not properly defined: %s", err)
+	}
+
+	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheusagent.Spec.ServiceMonitorNamespaceSelector); err != nil {
+		return fmt.Errorf("serviceMonitorNamespaceSelector is not properly defined: %s", err)
+	}
+
+	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheusagent.Spec.ScrapeConfigNamespaceSelector); err != nil {
+		return fmt.Errorf("scrapeConfigNamespaceSelector is not properly defined: %s", err)
+	}
+
+	if err := k8sutil.CheckResourceLabelSelectors(ctx, *clientSets, prometheusagent.Spec.ServiceMonitorSelector, k8sutil.ServiceMonitor, namespace); err != nil {
+		return fmt.Errorf("serviceMonitorSelector is not properly defined: %s", err)
+	}
+
+	if err := k8sutil.CheckResourceLabelSelectors(ctx, *clientSets, prometheusagent.Spec.PodMonitorSelector, k8sutil.PodMonitor, namespace); err != nil {
+		return fmt.Errorf("podMonitorSelector is not properly defined: %s", err)
+	}
+
+	if err := k8sutil.CheckResourceLabelSelectors(ctx, *clientSets, prometheusagent.Spec.ProbeSelector, k8sutil.Probe, namespace); err != nil {
+		return fmt.Errorf("probeSelector is not properly defined: %s", err)
+	}
+
+	if err := k8sutil.CheckResourceLabelSelectors(ctx, *clientSets, prometheusagent.Spec.ScrapeConfigSelector, k8sutil.ScrapeConfig, namespace); err != nil {
+		return fmt.Errorf("scrapeConfigSelector is not properly defined: %s", err)
+	}
+
+	slog.Info("prometheusagent Agent is compliant, no issues found", "name", name, "namespace", namespace)
 	return nil
 }
