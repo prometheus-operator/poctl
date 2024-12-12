@@ -55,7 +55,7 @@ func getPrometheusAgentClusterRoleBinding(namespace string) []rbacv1.ClusterRole
 	}
 }
 
-func TestPrometheusAgentnalyzer(t *testing.T) {
+func TestPrometheusAgentAnalyzer(t *testing.T) {
 	type testCase struct {
 		name                string
 		namespace           string
@@ -91,7 +91,7 @@ func TestPrometheusAgentnalyzer(t *testing.T) {
 			},
 		},
 		{
-			name:       "PrometheusServiceAccountNotFound",
+			name:       "PrometheusAgentServiceAccountNotFound",
 			namespace:  "test",
 			shouldFail: true,
 			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
@@ -119,7 +119,7 @@ func TestPrometheusAgentnalyzer(t *testing.T) {
 			},
 		},
 		{
-			name:       "ConfigMapsVerbsNotFoundInClusterRole",
+			name:       "ConfigMapsVerbsNotFoundInClusterRolePromAgent",
 			namespace:  "test",
 			shouldFail: true,
 			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
@@ -143,7 +143,7 @@ func TestPrometheusAgentnalyzer(t *testing.T) {
 				kClient.PrependReactor("get", "clusterroles", func(_ clienttesting.Action) (bool, runtime.Object, error) {
 					return true, &rbacv1.ClusterRole{
 						ObjectMeta: metav1.ObjectMeta{
-							Name: "prometheus",
+							Name: "prometheus-agent",
 						},
 						Rules: []rbacv1.PolicyRule{
 							{
@@ -161,7 +161,7 @@ func TestPrometheusAgentnalyzer(t *testing.T) {
 			},
 		},
 		{
-			name:       "RequiredVerbsNotFoundInClusterRole",
+			name:       "RequiredVerbsNotFoundInClusterRolePromAgent",
 			namespace:  "test",
 			shouldFail: true,
 			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
@@ -185,7 +185,7 @@ func TestPrometheusAgentnalyzer(t *testing.T) {
 				kClient.PrependReactor("get", "clusterroles", func(_ clienttesting.Action) (bool, runtime.Object, error) {
 					return true, &rbacv1.ClusterRole{
 						ObjectMeta: metav1.ObjectMeta{
-							Name: "prometheus",
+							Name: "prometheus-agent",
 						},
 						Rules: []rbacv1.PolicyRule{
 							{
@@ -204,7 +204,7 @@ func TestPrometheusAgentnalyzer(t *testing.T) {
 			},
 		},
 		{
-			name:       "NonResourceURLsNotFoundInClusterRole",
+			name:       "NonResourceURLsNotFoundInClusterRolePromAgent",
 			namespace:  "test",
 			shouldFail: true,
 			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
@@ -228,7 +228,7 @@ func TestPrometheusAgentnalyzer(t *testing.T) {
 				kClient.PrependReactor("get", "clusterroles", func(_ clienttesting.Action) (bool, runtime.Object, error) {
 					return true, &rbacv1.ClusterRole{
 						ObjectMeta: metav1.ObjectMeta{
-							Name: "prometheus",
+							Name: "prometheus-agent",
 						},
 						Rules: []rbacv1.PolicyRule{
 							{
@@ -246,7 +246,7 @@ func TestPrometheusAgentnalyzer(t *testing.T) {
 			},
 		},
 		{
-			name:       "NamespaceSelectorNull",
+			name:       "PromAgentNamespaceSelectorNull",
 			namespace:  "test",
 			shouldFail: false,
 			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
@@ -270,7 +270,7 @@ func TestPrometheusAgentnalyzer(t *testing.T) {
 			},
 		},
 		{
-			name:       "NamespaceSelectorEmpty",
+			name:       "PromAgentNamespaceSelectorEmpty",
 			namespace:  "test",
 			shouldFail: false,
 			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
@@ -297,7 +297,7 @@ func TestPrometheusAgentnalyzer(t *testing.T) {
 			},
 		},
 		{
-			name:       "NamespaceSelectorWithoutMatchLabels",
+			name:       "PromAgentNamespaceSelectorWithoutMatchLabels",
 			namespace:  "test",
 			shouldFail: true,
 			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
@@ -339,7 +339,7 @@ func TestPrometheusAgentnalyzer(t *testing.T) {
 			},
 		},
 		{
-			name:       "NamespaceSelectorWithtMatchLabels",
+			name:       "PromAgentNamespaceSelectorWithtMatchLabels",
 			namespace:  "test",
 			shouldFail: false,
 			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
@@ -381,7 +381,7 @@ func TestPrometheusAgentnalyzer(t *testing.T) {
 			},
 		},
 		{
-			name:       "ServiceSelectorsEmpty",
+			name:       "PromAgentServiceSelectorsEmpty",
 			namespace:  "test",
 			shouldFail: false,
 			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
@@ -409,7 +409,7 @@ func TestPrometheusAgentnalyzer(t *testing.T) {
 			},
 		},
 		{
-			name:       "ServiceSelectorsNull",
+			name:       "PromAgentServiceSelectorsNull",
 			namespace:  "test",
 			shouldFail: true,
 			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
@@ -434,7 +434,7 @@ func TestPrometheusAgentnalyzer(t *testing.T) {
 			},
 		},
 		{
-			name:       "ServiceSelectorsWithoutMatchLabels",
+			name:       "PromAgentServiceSelectorsWithoutMatchLabels",
 			namespace:  "test",
 			shouldFail: true,
 			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
@@ -475,7 +475,7 @@ func TestPrometheusAgentnalyzer(t *testing.T) {
 			},
 		},
 		{
-			name:       "ServiceSelectorsWithMatchLabels",
+			name:       "PromAgentServiceSelectorsWithMatchLabels",
 			namespace:  "test",
 			shouldFail: true,
 			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
