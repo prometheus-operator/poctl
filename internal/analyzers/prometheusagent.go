@@ -24,8 +24,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func RunPrometheusAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets, name, namespace string) error {
-	prometheus, err := clientSets.MClient.MonitoringV1().Prometheuses(namespace).Get(ctx, name, metav1.GetOptions{})
+func RunPrometheusAgentAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets, name, namespace string) error {
+	prometheusagent, err := clientSets.MClient.MonitoringV1alpha1().PrometheusAgents(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return fmt.Errorf("prometheus %s not found in namespace %s", name, namespace)
@@ -34,14 +34,14 @@ func RunPrometheusAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets, 
 	}
 
 	cRb, err := clientSets.KClient.RbacV1().ClusterRoleBindings().List(ctx, metav1.ListOptions{
-		LabelSelector: "prometheus=prometheus",
+		LabelSelector: "name=prometheus-agent",
 	})
 	if err != nil {
 		return fmt.Errorf("failed to list RoleBindings: %w", err)
 	}
 
-	if !k8sutil.IsServiceAccountBoundToRoleBindingList(cRb, prometheus.Spec.ServiceAccountName) {
-		return fmt.Errorf("serviceAccount %s is not bound to any RoleBindings", prometheus.Spec.ServiceAccountName)
+	if !k8sutil.IsServiceAccountBoundToRoleBindingList(cRb, prometheusagent.Spec.ServiceAccountName) {
+		return fmt.Errorf("serviceAccount %s is not bound to any RoleBindings", prometheusagent.Spec.ServiceAccountName)
 	}
 
 	for _, crb := range cRb.Items {
@@ -56,46 +56,38 @@ func RunPrometheusAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets, 
 		}
 	}
 
-	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheus.Spec.PodMonitorNamespaceSelector); err != nil {
+	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheusagent.Spec.PodMonitorNamespaceSelector); err != nil {
 		return fmt.Errorf("podMonitorNamespaceSelector is not properly defined: %s", err)
 	}
 
-	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheus.Spec.ProbeNamespaceSelector); err != nil {
+	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheusagent.Spec.ProbeNamespaceSelector); err != nil {
 		return fmt.Errorf("probeNamespaceSelector is not properly defined: %s", err)
 	}
 
-	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheus.Spec.ServiceMonitorNamespaceSelector); err != nil {
+	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheusagent.Spec.ServiceMonitorNamespaceSelector); err != nil {
 		return fmt.Errorf("serviceMonitorNamespaceSelector is not properly defined: %s", err)
 	}
 
-	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheus.Spec.ScrapeConfigNamespaceSelector); err != nil {
+	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheusagent.Spec.ScrapeConfigNamespaceSelector); err != nil {
 		return fmt.Errorf("scrapeConfigNamespaceSelector is not properly defined: %s", err)
 	}
 
-	if err := k8sutil.CheckResourceNamespaceSelectors(ctx, *clientSets, prometheus.Spec.RuleNamespaceSelector); err != nil {
-		return fmt.Errorf("ruleNamespaceSelector is not properly defined: %s", err)
-	}
-
-	if err := k8sutil.CheckResourceLabelSelectors(ctx, *clientSets, prometheus.Spec.ServiceMonitorSelector, k8sutil.ServiceMonitor, namespace); err != nil {
+	if err := k8sutil.CheckResourceLabelSelectors(ctx, *clientSets, prometheusagent.Spec.ServiceMonitorSelector, k8sutil.ServiceMonitor, namespace); err != nil {
 		return fmt.Errorf("serviceMonitorSelector is not properly defined: %s", err)
 	}
 
-	if err := k8sutil.CheckResourceLabelSelectors(ctx, *clientSets, prometheus.Spec.PodMonitorSelector, k8sutil.PodMonitor, namespace); err != nil {
+	if err := k8sutil.CheckResourceLabelSelectors(ctx, *clientSets, prometheusagent.Spec.PodMonitorSelector, k8sutil.PodMonitor, namespace); err != nil {
 		return fmt.Errorf("podMonitorSelector is not properly defined: %s", err)
 	}
 
-	if err := k8sutil.CheckResourceLabelSelectors(ctx, *clientSets, prometheus.Spec.ProbeSelector, k8sutil.Probe, namespace); err != nil {
+	if err := k8sutil.CheckResourceLabelSelectors(ctx, *clientSets, prometheusagent.Spec.ProbeSelector, k8sutil.Probe, namespace); err != nil {
 		return fmt.Errorf("probeSelector is not properly defined: %s", err)
 	}
 
-	if err := k8sutil.CheckResourceLabelSelectors(ctx, *clientSets, prometheus.Spec.ScrapeConfigSelector, k8sutil.ScrapeConfig, namespace); err != nil {
+	if err := k8sutil.CheckResourceLabelSelectors(ctx, *clientSets, prometheusagent.Spec.ScrapeConfigSelector, k8sutil.ScrapeConfig, namespace); err != nil {
 		return fmt.Errorf("scrapeConfigSelector is not properly defined: %s", err)
 	}
 
-	if err := k8sutil.CheckResourceLabelSelectors(ctx, *clientSets, prometheus.Spec.RuleSelector, k8sutil.PrometheusRule, namespace); err != nil {
-		return fmt.Errorf("ruleSelector is not properly defined: %s", err)
-	}
-
-	slog.Info("Prometheus is compliant, no issues found", "name", name, "namespace", namespace)
+	slog.Info("prometheusagent Agent is compliant, no issues found", "name", name, "namespace", namespace)
 	return nil
 }
