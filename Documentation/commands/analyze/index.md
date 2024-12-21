@@ -70,7 +70,7 @@ The Prometheus server requires proper RBAC (Role-Based Access Control) rules to 
 
 Since Prometheus just reads Objects in the Kubernetes API, it requires the get, list, and watch actions. As Prometheus can also be used to scrape metrics from the Kubernetes apiserver, it also requires access to the /metrics/ endpoint of it. In addition to the rules for Prometheus itself, the Prometheus needs to be able to get configmaps to be able to pull in rule files from configmap objects.
 
-### Prometheus Namespace Selectors and Service Selectors
+### Prometheus Namespace Selectors and Monitors Selectors
 
 The Prometheus server relies on proper service discovery to function correctly. To achieve this, we must ensure that any defined Namespace Selector corresponds to an existing namespace. Similarly, for Service Selectors, it is crucial that they align with existing resources. Whether using ServiceMonitor, PodMonitor, ScrapeConfig, Probe, or PrometheusRule, the respective Custom Resource (CR) must exist and be properly matched.
 
