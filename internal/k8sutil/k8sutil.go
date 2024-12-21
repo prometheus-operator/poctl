@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
@@ -40,6 +41,14 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+)
+
+const (
+	ServiceMonitor = "ServiceMonitor"
+	PodMonitor     = "PodMonitor"
+	Probe          = "Probe"
+	ScrapeConfig   = "ScrapeConfig"
+	PrometheusRule = "PrometheusRule"
 )
 
 var ApplyOption = metav1.ApplyOptions{
@@ -184,6 +193,127 @@ func CheckResourceNamespaceSelectors(ctx context.Context, clientSets ClientSets,
 	if len(namespaces.Items) == 0 {
 		return fmt.Errorf("no namespaces match the selector %s", labelSelector)
 	}
+	return nil
+}
 
+func CheckResourceLabelSelectors(ctx context.Context, clientSets ClientSets, labelSelector *metav1.LabelSelector, resourceName, namespace string) error {
+	if labelSelector == nil {
+		return fmt.Errorf("%s selector is not defined", resourceName)
+	}
+
+	if len(labelSelector.MatchLabels) == 0 && len(labelSelector.MatchExpressions) == 0 {
+		return nil
+	}
+
+	labelMap, err := metav1.LabelSelectorAsMap(labelSelector)
+	if err != nil {
+		return fmt.Errorf("invalid label selector format in %s: %v", resourceName, err)
+	}
+
+	switch resourceName {
+	case ServiceMonitor:
+		serviceMonitors, err := clientSets.MClient.MonitoringV1().ServiceMonitors(namespace).List(ctx, metav1.ListOptions{LabelSelector: labels.SelectorFromSet(labelMap).String()})
+		if err != nil {
+			return fmt.Errorf("failed to list ServiceMonitors in %s: %v", namespace, err)
+		}
+		if len(serviceMonitors.Items) == 0 {
+			return fmt.Errorf("no ServiceMonitors match the provided selector in Prometheus %s", namespace)
+		}
+	case PodMonitor:
+		podMonitors, err := clientSets.MClient.MonitoringV1().PodMonitors(namespace).List(ctx, metav1.ListOptions{LabelSelector: labels.SelectorFromSet(labelMap).String()})
+		if err != nil {
+			return fmt.Errorf("failed to list PodMonitor in %s: %v", namespace, err)
+		}
+		if len(podMonitors.Items) == 0 {
+			return fmt.Errorf("no PodMonitors match the provided selector in Prometheus %s", namespace)
+		}
+	case Probe:
+		probes, err := clientSets.MClient.MonitoringV1().Probes(namespace).List(ctx, metav1.ListOptions{LabelSelector: labels.SelectorFromSet(labelMap).String()})
+		if err != nil {
+			return fmt.Errorf("failed to list Probes in %s: %v", namespace, err)
+		}
+		if len(probes.Items) == 0 {
+			return fmt.Errorf("no Probes match the provided selector in Prometheus %s", namespace)
+		}
+	case ScrapeConfig:
+		scrapeConfigs, err := clientSets.MClient.MonitoringV1alpha1().ScrapeConfigs(namespace).List(ctx, metav1.ListOptions{LabelSelector: labels.SelectorFromSet(labelMap).String()})
+		if err != nil {
+			return fmt.Errorf("failed to list ScrapeConfigs in %s: %v", namespace, err)
+		}
+		if len(scrapeConfigs.Items) == 0 {
+			return fmt.Errorf("no ScrapeConfigs match the provided selector in Prometheus %s", namespace)
+		}
+	case PrometheusRule:
+		promRules, err := clientSets.MClient.MonitoringV1().PrometheusRules(namespace).List(ctx, metav1.ListOptions{LabelSelector: labels.SelectorFromSet(labelMap).String()})
+		if err != nil {
+			return fmt.Errorf("failed to list Probes in %s: %v", namespace, err)
+		}
+		if len(promRules.Items) == 0 {
+			return fmt.Errorf("no PrometheusRules match the provided selector in Prometheus %s", namespace)
+		}
+	default:
+		return fmt.Errorf("unknown selector type: %s", resourceName)
+	}
+
+	return nil
+}
+
+func CheckPrometheusClusterRoleRules(crb v1.ClusterRoleBinding, cr *v1.ClusterRole) error {
+	var errs []string
+	verbsToCheck := []string{"get", "list", "watch"}
+	missingVerbs := []string{}
+
+	for _, rule := range cr.Rules {
+		for _, resource := range rule.Resources {
+			found := false
+			if resource == "configmaps" {
+				for _, verb := range rule.Verbs {
+					if verb == "get" {
+						found = true
+						break
+					}
+				}
+				if !found {
+					errs = append(errs, fmt.Sprintf("ClusterRole %s does not include 'configmaps' with 'get' in its verbs", crb.RoleRef.Name))
+				}
+				continue
+			}
+			for range rule.APIGroups {
+				for _, requiredVerb := range verbsToCheck {
+					found := false
+					for _, verb := range rule.Verbs {
+						if verb == requiredVerb {
+							found = true
+							break
+						}
+					}
+					if !found {
+						missingVerbs = append(missingVerbs, requiredVerb)
+					}
+				}
+				if len(missingVerbs) > 0 {
+					errs = append(errs, fmt.Sprintf("ClusterRole %s is missing necessary verbs for APIGroups: %v", crb.RoleRef.Name, missingVerbs))
+				}
+			}
+		}
+		for _, nonResource := range rule.NonResourceURLs {
+			if nonResource == "/metrics" {
+				hasGet := false
+				for _, verb := range rule.Verbs {
+					if verb == "get" {
+						hasGet = true
+						break
+					}
+				}
+				if !hasGet {
+					errs = append(errs, fmt.Sprintf("ClusterRole %s does not include 'get' verb for NonResourceURL '/metrics'", crb.RoleRef.Name))
+				}
+			}
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("multiple errors found:\n%s", strings.Join(errs, "\n"))
+	}
 	return nil
 }
