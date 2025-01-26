@@ -91,7 +91,7 @@ func TestOverlappingAnalyzer(t *testing.T) {
 							{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "podmonitor-1",
-									Namespace: "test",
+									Namespace: tc.namespace,
 								},
 								Spec: monitoringv1.PodMonitorSpec{
 									Selector: metav1.LabelSelector{
@@ -107,7 +107,7 @@ func TestOverlappingAnalyzer(t *testing.T) {
 							{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "podmonitor-2",
-									Namespace: "test",
+									Namespace: tc.namespace,
 								},
 								Spec: monitoringv1.PodMonitorSpec{
 									Selector: metav1.LabelSelector{
@@ -128,6 +128,74 @@ func TestOverlappingAnalyzer(t *testing.T) {
 				kClient.PrependReactor("list", "pods", func(_ clienttesting.Action) (bool, runtime.Object, error) {
 					return true, &corev1.PodList{
 						Items: []corev1.Pod{
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "overlapping-pod",
+									Namespace: "test",
+									Labels: map[string]string{
+										"app": "overlapping-app",
+									},
+								},
+							},
+						},
+					}, nil
+				})
+
+				return k8sutil.ClientSets{
+					MClient: mClient,
+					KClient: kClient,
+				}
+			},
+		},
+		{
+			name:       "OverlapingServiceMonitor",
+			namespace:  "test",
+			shouldFail: true,
+			getMockedClientSets: func(tc testCase) k8sutil.ClientSets {
+				mClient := monitoringclient.NewSimpleClientset(&monitoringv1.ServiceMonitorList{})
+				mClient.PrependReactor("list", "servicemonitors", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &monitoringv1.ServiceMonitorList{
+						Items: []*monitoringv1.ServiceMonitor{
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "servicemonitor-1",
+									Namespace: tc.namespace,
+								},
+								Spec: monitoringv1.ServiceMonitorSpec{
+									Selector: metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"app": "overlapping-app",
+										},
+									},
+									Endpoints: []monitoringv1.Endpoint{
+										{Port: "http-metrics"},
+									},
+								},
+							},
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "servicemonitor-2",
+									Namespace: tc.namespace,
+								},
+								Spec: monitoringv1.ServiceMonitorSpec{
+									Selector: metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"app": "overlapping-app",
+										},
+									},
+									Endpoints: []monitoringv1.Endpoint{
+										{Port: "http-metrics"},
+									},
+								},
+							},
+						},
+					}, nil
+				})
+
+				kClient := fake.NewSimpleClientset(&corev1.PodList{})
+				kClient.PrependReactor("list", "services", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+					return true, &corev1.ServiceList{
+						Items: []corev1.Service{
 							{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "overlapping-pod",
