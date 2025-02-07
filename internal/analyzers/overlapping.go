@@ -22,7 +22,6 @@ import (
 
 	"github.com/prometheus-operator/poctl/internal/k8sutil"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,22 +30,20 @@ func RunOverlappingAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets,
 
 	serviceMonitors, err := clientSets.MClient.MonitoringV1().ServiceMonitors(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		if errors.IsNotFound(err) {
-			monitorsListErrs = append(monitorsListErrs, fmt.Sprintf("No ServiceMonitors found in namespace %s", namespace))
-		}
-		monitorsListErrs = append(monitorsListErrs, fmt.Sprintf("No ServiceMonitors found in namespace %s", namespace))
+		monitorsListErrs = append(monitorsListErrs, fmt.Sprintf("Error while getting ServiceMonitors %v", err))
 	}
 
 	podMonitors, err := clientSets.MClient.MonitoringV1().PodMonitors(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		if errors.IsNotFound(err) {
-			monitorsListErrs = append(monitorsListErrs, fmt.Sprintf("No PodMonitors found in namespace %s", namespace))
-		}
-		monitorsListErrs = append(monitorsListErrs, fmt.Sprintf("No PodMonitors found in namespace %s", namespace))
+		monitorsListErrs = append(monitorsListErrs, fmt.Sprintf("Error while getting No PodMonitors %v", err))
+	}
+
+	if (serviceMonitors == nil || len(serviceMonitors.Items) == 0) && (podMonitors == nil || len(podMonitors.Items) == 0) {
+		return nil
 	}
 
 	if len(monitorsListErrs) > 0 {
-		return fmt.Errorf("errors listing Pod/Service Monitors")
+		return fmt.Errorf("errors getting Pod/Service Monitors")
 	}
 
 	serviceOverlaps := make(map[string][]string)
