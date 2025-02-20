@@ -41,30 +41,16 @@ func RunOverlappingAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets,
 		return nil
 	}
 
-	serviceOverlaps := make(map[string][]string)
-	podOverlaps := make(map[string][]string)
 	var overlapErrs []string
 
 	for _, servicemonitor := range serviceMonitors.Items {
-		if err := checkOverlappingServiceMonitors(ctx, clientSets, servicemonitor, serviceOverlaps); err != nil {
+		if err := checkOverlappingServiceMonitors(ctx, clientSets, servicemonitor); err != nil {
 			overlapErrs = append(overlapErrs, err.Error())
 		}
 	}
 	for _, podmonitor := range podMonitors.Items {
-		if err := checkOverlappingPodMonitors(ctx, clientSets, podmonitor, podOverlaps); err != nil {
+		if err := checkOverlappingPodMonitors(ctx, clientSets, podmonitor); err != nil {
 			overlapErrs = append(overlapErrs, err.Error())
-		}
-	}
-
-	for key, svcMonitors := range serviceOverlaps {
-		if len(svcMonitors) > 1 {
-			overlapErrs = append(overlapErrs, fmt.Sprintf("Overlapping ServiceMonitors found for service/port %s: %v", key, svcMonitors))
-		}
-	}
-
-	for key, pdMonitors := range podOverlaps {
-		if len(pdMonitors) > 1 {
-			overlapErrs = append(overlapErrs, fmt.Sprintf("Overlapping PodMonitors found for pod/port %s: %v", key, pdMonitors))
 		}
 	}
 
@@ -76,7 +62,7 @@ func RunOverlappingAnalyzer(ctx context.Context, clientSets *k8sutil.ClientSets,
 	return nil
 }
 
-func checkOverlappingServiceMonitors(ctx context.Context, clientSets *k8sutil.ClientSets, servicemonitor *monitoringv1.ServiceMonitor, serviceOverlaps map[string][]string) error {
+func checkOverlappingServiceMonitors(ctx context.Context, clientSets *k8sutil.ClientSets, servicemonitor *monitoringv1.ServiceMonitor) error {
 	selector, err := metav1.LabelSelectorAsSelector(&servicemonitor.Spec.Selector)
 	if err != nil {
 		return fmt.Errorf("invalid selector in ServiceMonitor %s/%s: %v", servicemonitor.Namespace, servicemonitor.Name, err)
@@ -87,18 +73,27 @@ func checkOverlappingServiceMonitors(ctx context.Context, clientSets *k8sutil.Cl
 		return fmt.Errorf("error listing services for ServiceMonitor %s/%s: %v", servicemonitor.Namespace, servicemonitor.Name, err)
 	}
 
+	serviceOverlaps := make(map[string][]string)
+	var overlapErrs []string
 	for _, service := range services.Items {
-		for _, scvPort := range service.Spec.Ports {
-			servicekey := fmt.Sprintf("%s/%s:%d", service.Namespace, service.Name, scvPort.Port)
-			serviceOverlaps[servicekey] = append(serviceOverlaps[servicekey], servicemonitor.Name)
+		for _, svcPort := range service.Spec.Ports {
+			serviceKey := fmt.Sprintf("%s/%s:%d", service.Namespace, service.Name, svcPort.Port)
+			serviceOverlaps[serviceKey] = append(serviceOverlaps[serviceKey], servicemonitor.Name)
 
+			if len(serviceOverlaps[serviceKey]) > 1 {
+				overlapErrs = append(overlapErrs, fmt.Sprintf("Overlapping ServiceMonitors found for service/port %s: %v", serviceKey, serviceOverlaps[serviceKey]))
+			}
 		}
+	}
+
+	if len(overlapErrs) > 0 {
+		return fmt.Errorf("%s", strings.Join(overlapErrs, "\n"))
 	}
 
 	return nil
 }
 
-func checkOverlappingPodMonitors(ctx context.Context, clientSets *k8sutil.ClientSets, podmonitor *monitoringv1.PodMonitor, podOverlaps map[string][]string) error {
+func checkOverlappingPodMonitors(ctx context.Context, clientSets *k8sutil.ClientSets, podmonitor *monitoringv1.PodMonitor) error {
 	selector, err := metav1.LabelSelectorAsSelector(&podmonitor.Spec.Selector)
 	if err != nil {
 		return fmt.Errorf("invalid selector in PodMonitor %s/%s: %v", podmonitor.Namespace, podmonitor.Name, err)
@@ -109,11 +104,21 @@ func checkOverlappingPodMonitors(ctx context.Context, clientSets *k8sutil.Client
 		return fmt.Errorf("error listing pods for PodMonitor %s/%s: %v", podmonitor.Namespace, podmonitor.Name, err)
 	}
 
+	podOverlaps := make(map[string][]string)
+	var overlapErrs []string
 	for _, pod := range pods.Items {
 		for _, podPort := range podmonitor.Spec.PodMetricsEndpoints {
 			podKey := fmt.Sprintf("%s/%s:%s", pod.Namespace, pod.Name, podPort.Port)
 			podOverlaps[podKey] = append(podOverlaps[podKey], podmonitor.Name)
+
+			if len(podOverlaps[podKey]) > 1 {
+				overlapErrs = append(overlapErrs, fmt.Sprintf("Overlapping ServiceMonitors found for service/port %s: %v", podKey, podOverlaps[podKey]))
+			}
 		}
+	}
+
+	if len(overlapErrs) > 0 {
+		return fmt.Errorf("%s", strings.Join(overlapErrs, "\n"))
 	}
 
 	return nil
