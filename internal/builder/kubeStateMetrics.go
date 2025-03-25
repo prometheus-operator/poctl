@@ -27,7 +27,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-const LatestKubeStateMetricsVersion = "2.14.0"
+const LatestKubeStateMetricsVersion = "2.15.0"
 
 type KubeStateMetricsBuilder struct {
 	labels         map[string]string
