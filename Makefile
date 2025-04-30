@@ -43,6 +43,12 @@ tidy:
 	go mod tidy -v
 	cd scripts && go mod tidy -v -modfile=go.mod -compat=1.18
 
+.PHONY: update-go-deps
+update-go-deps:
+	for m in $$(go list -mod=readonly -m -f '{{ if and (not .Indirect) (not .Main)}}{{.Path}}{{end}}' all); do \
+		go get -u $$m; \
+	done
+
 .PHONY: poctl
 poctl:
 	$(GO_BUILD_RECIPE) -o $@ main.go
