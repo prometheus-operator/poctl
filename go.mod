@@ -3,7 +3,7 @@ module github.com/prometheus-operator/poctl
 go 1.23.0
 
 require (
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	k8s.io/apiextensions-apiserver v0.30.2
 	k8s.io/client-go v0.30.2
 )
