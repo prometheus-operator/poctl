@@ -457,7 +457,7 @@ func TestPrometheusAnalyzer(t *testing.T) {
 
 				mClient.PrependReactor("list", "scrapeconfigs", func(_ clienttesting.Action) (handled bool, ret runtime.Object, err error) {
 					return true, &monitoringv1alpha1.ScrapeConfigList{
-						Items: []*monitoringv1alpha1.ScrapeConfig{
+						Items: []monitoringv1alpha1.ScrapeConfig{
 							{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "scrapeconfig-crd",
@@ -498,7 +498,7 @@ func TestPrometheusAnalyzer(t *testing.T) {
 
 				mClient.PrependReactor("list", "probes", func(_ clienttesting.Action) (handled bool, ret runtime.Object, err error) {
 					return true, &monitoringv1.ProbeList{
-						Items: []*monitoringv1.Probe{
+						Items: []monitoringv1.Probe{
 							{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "probes-crd",

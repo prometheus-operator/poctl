@@ -245,7 +245,7 @@ func TestAlertmanagerAnalyzer(t *testing.T) {
 
 				mClient.PrependReactor("get", "alertmanagerconfigs", func(_ clienttesting.Action) (bool, runtime.Object, error) {
 					return true, &monitoringv1alpha1.AlertmanagerConfigList{
-						Items: []*monitoringv1alpha1.AlertmanagerConfig{
+						Items: []monitoringv1alpha1.AlertmanagerConfig{
 							{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "alertmanagerconfigs-crd",
