@@ -1,0 +1,59 @@
+version: "2"
+run:
+  timeout: 10m
+linters:
+  enable:
+    - depguard
+    - exptostd
+    - godot
+    - iface
+    - nilnesserr
+    - recvcheck
+    - revive
+    - sloglint
+    - testifylint
+    - unconvert
+  settings:
+    depguard:
+      rules:
+        forbid-pkg-errors:
+          deny:
+            - pkg: github.com/pkg/errors
+              desc: Should be replaced with standard lib errors or fmt.Errorf
+    errcheck:
+      exclude-functions:
+        # Any error in HTTP handlers is handled by the server itself.
+        - (net/http.ResponseWriter).Write
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      # Disable errcheck linter for test files.
+      - linters:
+          - errcheck
+          - staticcheck
+          - testifylint
+        path: _test.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/prometheus-operator/prometheus-operator)
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
