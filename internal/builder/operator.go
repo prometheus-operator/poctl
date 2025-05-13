@@ -17,7 +17,6 @@ package builder
 import (
 	"fmt"
 
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/client/applyconfiguration/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -26,6 +25,8 @@ import (
 	applyConfigMetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	applyConfigRbacv1 "k8s.io/client-go/applyconfigurations/rbac/v1"
 	"k8s.io/utils/ptr"
+
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/client/applyconfiguration/monitoring/v1"
 )
 
 type OperatorBuilder struct {

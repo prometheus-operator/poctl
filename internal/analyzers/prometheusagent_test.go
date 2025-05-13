@@ -19,9 +19,6 @@ import (
 	"testing"
 
 	"github.com/prometheus-operator/poctl/internal/k8sutil"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
-	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned/fake"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -30,6 +27,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	clienttesting "k8s.io/client-go/testing"
+
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned/fake"
 )
 
 func getPrometheusAgentClusterRoleBinding(namespace string) []rbacv1.ClusterRoleBinding {
@@ -457,7 +458,7 @@ func TestPrometheusAgentAnalyzer(t *testing.T) {
 
 				mClient.PrependReactor("list", "scrapeconfigs", func(_ clienttesting.Action) (handled bool, ret runtime.Object, err error) {
 					return true, &monitoringv1alpha1.ScrapeConfigList{
-						Items: []*monitoringv1alpha1.ScrapeConfig{
+						Items: []monitoringv1alpha1.ScrapeConfig{
 							{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "scrapeconfig-crd",
@@ -498,7 +499,7 @@ func TestPrometheusAgentAnalyzer(t *testing.T) {
 
 				mClient.PrependReactor("list", "probes", func(_ clienttesting.Action) (handled bool, ret runtime.Object, err error) {
 					return true, &monitoringv1.ProbeList{
-						Items: []*monitoringv1.Probe{
+						Items: []monitoringv1.Probe{
 							{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "probes-crd",

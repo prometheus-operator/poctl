@@ -18,9 +18,6 @@ import (
 	"testing"
 
 	"github.com/prometheus-operator/poctl/internal/k8sutil"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
-	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned/fake"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -28,6 +25,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	clienttesting "k8s.io/client-go/testing"
+
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned/fake"
 )
 
 func TestAlertmanagerAnalyzer(t *testing.T) {
@@ -245,7 +246,7 @@ func TestAlertmanagerAnalyzer(t *testing.T) {
 
 				mClient.PrependReactor("get", "alertmanagerconfigs", func(_ clienttesting.Action) (bool, runtime.Object, error) {
 					return true, &monitoringv1alpha1.AlertmanagerConfigList{
-						Items: []*monitoringv1alpha1.AlertmanagerConfig{
+						Items: []monitoringv1alpha1.AlertmanagerConfig{
 							{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "alertmanagerconfigs-crd",

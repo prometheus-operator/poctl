@@ -22,9 +22,8 @@ import (
 	"github.com/google/go-github/v62/github"
 	"github.com/prometheus-operator/poctl/internal/builder"
 	"github.com/prometheus-operator/poctl/internal/k8sutil"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )

@@ -21,12 +21,12 @@ import (
 
 	"github.com/prometheus-operator/poctl/internal/k8sutil"
 	"github.com/prometheus-operator/poctl/internal/log"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/client/applyconfiguration/monitoring/v1"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	applyConfigMetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
-
 	"k8s.io/utils/ptr"
+
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/client/applyconfiguration/monitoring/v1"
 )
 
 var (
