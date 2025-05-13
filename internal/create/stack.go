@@ -20,13 +20,12 @@ import (
 	"log/slog"
 
 	"github.com/google/go-github/v62/github"
+	"github.com/prometheus-operator/poctl/internal/builder"
+	"github.com/prometheus-operator/poctl/internal/k8sutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/prometheus-operator/poctl/internal/builder"
-	"github.com/prometheus-operator/poctl/internal/k8sutil"
 )
 
 func RunCreateStack(ctx context.Context, logger *slog.Logger, clientSets *k8sutil.ClientSets, gitHubClient *github.Client, version string) error {
