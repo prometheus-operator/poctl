@@ -40,7 +40,7 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	golang.org/x/net v0.40.0 // indirect
-	golang.org/x/oauth2 v0.29.0 // indirect
+	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/term v0.32.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
@@ -61,5 +61,5 @@ require (
 require (
 	github.com/google/go-github/v62 v62.0.0
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/prometheus-operator/prometheus-operator/pkg/client v0.82.2
+	github.com/prometheus-operator/prometheus-operator/pkg/client v0.83.0
 )
