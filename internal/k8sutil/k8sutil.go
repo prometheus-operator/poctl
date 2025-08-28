@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	v1 "k8s.io/api/rbac/v1"
@@ -268,11 +269,8 @@ func CheckPrometheusClusterRoleRules(crb v1.ClusterRoleBinding, cr *v1.ClusterRo
 		for _, resource := range rule.Resources {
 			found := false
 			if resource == "configmaps" {
-				for _, verb := range rule.Verbs {
-					if verb == "get" {
-						found = true
-						break
-					}
+				if slices.Contains(rule.Verbs, "get") {
+					found = true
 				}
 				if !found {
 					errs = append(errs, fmt.Sprintf("ClusterRole %s does not include 'configmaps' with 'get' in its verbs", crb.RoleRef.Name))
@@ -281,13 +279,7 @@ func CheckPrometheusClusterRoleRules(crb v1.ClusterRoleBinding, cr *v1.ClusterRo
 			}
 			for range rule.APIGroups {
 				for _, requiredVerb := range verbsToCheck {
-					found := false
-					for _, verb := range rule.Verbs {
-						if verb == requiredVerb {
-							found = true
-							break
-						}
-					}
+					found := slices.Contains(rule.Verbs, requiredVerb)
 					if !found {
 						missingVerbs = append(missingVerbs, requiredVerb)
 					}
@@ -299,13 +291,7 @@ func CheckPrometheusClusterRoleRules(crb v1.ClusterRoleBinding, cr *v1.ClusterRo
 		}
 		for _, nonResource := range rule.NonResourceURLs {
 			if nonResource == "/metrics" {
-				hasGet := false
-				for _, verb := range rule.Verbs {
-					if verb == "get" {
-						hasGet = true
-						break
-					}
-				}
+				hasGet := slices.Contains(rule.Verbs, "get")
 				if !hasGet {
 					errs = append(errs, fmt.Sprintf("ClusterRole %s does not include 'get' verb for NonResourceURL '/metrics'", crb.RoleRef.Name))
 				}

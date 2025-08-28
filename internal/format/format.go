@@ -32,7 +32,7 @@ func PrintManifest(r io.Reader, w io.Writer) error {
 	for {
 		// parse the YAML manifest.
 		obj := &unstructured.Unstructured{
-			Object: map[string]interface{}{},
+			Object: map[string]any{},
 		}
 
 		err := dec.Decode(obj.Object)
@@ -64,14 +64,14 @@ func PrintManifest(r io.Reader, w io.Writer) error {
 		}
 
 		for _, g := range groups {
-			group := g.(map[string]interface{})
+			group := g.(map[string]any)
 			rules, _, err := unstructured.NestedSlice(group, "rules")
 			if err != nil {
 				return err
 			}
 
 			for _, r := range rules {
-				rule := r.(map[string]interface{})
+				rule := r.(map[string]any)
 
 				query, _, err := unstructured.NestedString(rule, "expr")
 				if err != nil {
