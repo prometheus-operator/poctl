@@ -6,7 +6,7 @@ require (
 	github.com/google/go-github/v62 v62.0.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.86.1
 	github.com/prometheus-operator/prometheus-operator/pkg/client v0.86.1
-	github.com/prometheus/prometheus v0.307.1
+	github.com/prometheus/prometheus v0.307.2
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
