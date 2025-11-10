@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/google/go-github/v62 v62.0.0
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.86.1
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.86.2
 	github.com/prometheus-operator/prometheus-operator/pkg/client v0.86.1
 	github.com/prometheus/prometheus v0.307.3
 	github.com/spf13/cobra v1.10.1
