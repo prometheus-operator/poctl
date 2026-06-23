@@ -78,7 +78,13 @@ func PrintManifest(r io.Reader, w io.Writer) error {
 					return err
 				}
 
-				expr, err := parser.ParseExpr(query)
+				p := parser.NewParser(parser.Options{
+					EnableExperimentalFunctions:  true,
+					ExperimentalDurationExpr:     true,
+					EnableExtendedRangeSelectors: true,
+					EnableBinopFillModifiers:     true,
+				})
+				expr, err := p.ParseExpr(query)
 				if err != nil {
 					return err
 				}
