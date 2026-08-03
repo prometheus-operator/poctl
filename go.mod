@@ -6,7 +6,7 @@ require (
 	github.com/google/go-github/v62 v62.0.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.93.0
 	github.com/prometheus-operator/prometheus-operator/pkg/client v0.93.0
-	github.com/prometheus/prometheus v0.313.1
+	github.com/prometheus/prometheus v0.313.2
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
@@ -64,7 +64,7 @@ require (
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/term v0.44.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
